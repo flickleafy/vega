@@ -22,7 +22,13 @@ On terminal, run:
 
 In the editor that is opened, you can type this:
 
+## For bash version
+
 > @reboot /path/to/file/watercooler.sh
 
 - **@reboot:** this will start the script as soon Linux is loaded
 - **/path/to/file/:** this is where the script is located
+
+## For Python version
+
+> @reboot $(which python3) /path/to/file/watercooler.py >> /path/to/file/watercooler.log 2>&1
