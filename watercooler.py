@@ -17,7 +17,7 @@ if sys.platform.startswith('linux') or sys.platform.startswith('freebsd'):
 def assignDegreeToWavelength(degree):
 
     minimumDegree = 34.2
-    maximumDegree = 43.5
+    maximumDegree = 45.5
     minimumWavelength = 380
     maximumWavelength = 780
     percentPosition = ((degree - minimumDegree) * 100 /
