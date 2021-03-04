@@ -5,7 +5,7 @@ A simple dynamic watercooler controller. Should work in any Linux.
 # Dependencies
 
 It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis.
-In the first version was made in bash, with parts of internal calculations is using Python, and parts is using bc.
+The first version was made in bash, with parts of internal calculations using Python, and parts using bc.
 The second version is entirely made in Python.
 
 # Cababilities
