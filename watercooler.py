@@ -16,13 +16,18 @@ if sys.platform.startswith('linux') or sys.platform.startswith('freebsd'):
 
 def assignDegreeToWavelength(degree):
 
-    minimumDegree = 34.2
-    maximumDegree = 45.5
-    minimumWavelength = 380
-    maximumWavelength = 780
-    percentPosition = ((degree - minimumDegree) * 100 /
-                       (maximumDegree - minimumDegree))/100
-    wavelength = minimumWavelength * (percentPosition + 1)
+    degreeMin = 33.0
+    degreeMax = 45.5
+    degreeRange = degreeMax - degreeMin
+    wavelMin = 380
+    wavelMax = 780
+    wavelRange = wavelMax - wavelMin
+
+    # percentPosition = ((degree - degreeMin) * 100 /
+    #                    (degreeMax - degreeMin))/100
+    # wavelength = wavelMin * (percentPosition + 1)
+
+    wavelength = (((degree - degreeMin) * wavelRange) / degreeRange) + wavelMin
 
     return wavelength
 
@@ -132,13 +137,14 @@ def setLedColor(watercoolers, wc_liquid_temp):
 
         device.set_color("led", "fixed", map_color)
 
-    print("RGB color in hexa ", color)
-    return True
+    status = "RGB color set to " + color
+    return status
 
 ###
 
 
 def setFanSpeed(watercoolers, degree):
+    status = ""
     if len(watercoolers) == 1:
         device = watercoolers[0]
         speed = 0
@@ -148,6 +154,7 @@ def setFanSpeed(watercoolers, degree):
 
         elif (degree > 30) and (degree <= 40):
             speed = round(degree * (1 + (0.10*(degree - 30))))
+            speed = min(100, speed)
 
         elif (degree > 40) and (degree <= 48):
             speed = round(degree*2.08)
@@ -155,10 +162,10 @@ def setFanSpeed(watercoolers, degree):
         else:
             speed = 100
 
-        print("Fan speed set to ", speed, "per cent")
+        status = "Fan speed set to " + str(speed) + " per cent"
         device.set_fixed_speed("fan", speed)
 
-    return True
+    return status
 
 
 def status(watercoolers):
@@ -167,6 +174,17 @@ def status(watercoolers):
         device = watercoolers[0]
         wcstatus = device.get_status()
     return wcstatus
+
+
+def cpu_status():
+    sensor = ""
+    if sys.platform.startswith('linux') or sys.platform.startswith('freebsd'):
+        for m, li in psutil.sensors_temperatures().items():
+            for label, current, _, _ in li:
+                if label.lower().replace(' ', '_') == "tdie":
+                    sensor = current
+
+    return sensor
 
 
 def initialize():
@@ -201,7 +219,8 @@ def removeFirstAddLast(list, last):
 
 
 if __name__ == '__main__':
-    wc_last_degrees_list = 0
+    wc_last_degrees = 0
+    cpu_last_degrees = 0
     watercoolers = initialize()
     if len(watercoolers) > 0:
         while True:
@@ -210,23 +229,37 @@ if __name__ == '__main__':
             wc_degree = wc_status[0][1]
             wc_fan_speed = wc_status[1][1]
             wc_pump_speed = wc_status[2][1]
+            cpu_degree = cpu_status()
 
-            if wc_last_degrees_list == 0:
-                wc_last_degrees_list = [wc_degree,
-                                        wc_degree, wc_degree, wc_degree]
+            if wc_last_degrees == 0:
+                wc_last_degrees = [wc_degree,
+                                   wc_degree, wc_degree, wc_degree, wc_degree]
+                cpu_last_degrees = [cpu_degree, cpu_degree,
+                                    cpu_degree, cpu_degree, cpu_degree]
 
-            wc_last_degrees_list = removeFirstAddLast(
-                wc_last_degrees_list, wc_degree)
+            wc_last_degrees = removeFirstAddLast(
+                wc_last_degrees, wc_degree)
+            cpu_last_degrees = removeFirstAddLast(
+                cpu_last_degrees, cpu_degree)
 
-            wc_average_degree = listAverage(wc_last_degrees_list)
+            wc_average_degree = listAverage(wc_last_degrees)
+            cpu_average_degree = listAverage(cpu_last_degrees)
+            weighed_average_degree = (
+                wc_average_degree + (cpu_average_degree*0.80))/2
 
-            setLedColor(watercoolers, wc_average_degree)
-            setFanSpeed(watercoolers, wc_average_degree)
+            ledStatus = setLedColor(watercoolers, wc_average_degree)
+            fanStatus = setFanSpeed(watercoolers, weighed_average_degree)
 
             print("Liquid temp ", wc_degree)
-            print("Average last temps", wc_average_degree)
+            print("CPU temp", cpu_degree)
+            print("Average liquid temps", wc_average_degree)
+            print("Average cpu temps", cpu_average_degree)
+            print("Weighed Average temps", weighed_average_degree)
             print("Fans speed ", wc_fan_speed)
-            print("Pump speed ", wc_pump_speed, "\n")
+            print("Pump speed ", wc_pump_speed)
+            print(ledStatus)
+            print(fanStatus)
+            print("\n")
 
             time.sleep(3)
     else:
