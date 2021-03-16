@@ -17,15 +17,11 @@ if sys.platform.startswith('linux') or sys.platform.startswith('freebsd'):
 def assignDegreeToWavelength(degree):
 
     degreeMin = 33.0
-    degreeMax = 45.5
+    degreeMax = 48.0
     degreeRange = degreeMax - degreeMin
     wavelMin = 380
     wavelMax = 780
     wavelRange = wavelMax - wavelMin
-
-    # percentPosition = ((degree - degreeMin) * 100 /
-    #                    (degreeMax - degreeMin))/100
-    # wavelength = wavelMin * (percentPosition + 1)
 
     wavelength = (((degree - degreeMin) * wavelRange) / degreeRange) + wavelMin
 
@@ -245,7 +241,7 @@ if __name__ == '__main__':
             wc_average_degree = listAverage(wc_last_degrees)
             cpu_average_degree = listAverage(cpu_last_degrees)
             weighed_average_degree = (
-                wc_average_degree + (cpu_average_degree*0.80))/2
+                wc_average_degree + (cpu_average_degree*0.85))/2
 
             ledStatus = setLedColor(watercoolers, wc_average_degree)
             fanStatus = setFanSpeed(watercoolers, weighed_average_degree)
