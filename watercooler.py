@@ -7,32 +7,33 @@ import sys
 import time
 
 import liquidctl.cli as liquidAPI
-from liquidctl.util import normalize_profile, interpolate_profile, color_from_str
+from liquidctl.util import color_from_str
 from liquidctl.driver import *
 
 if sys.platform.startswith('linux') or sys.platform.startswith('freebsd'):
     import psutil
 
 
-def assignDegreeToWavelength(degree):
+def assign_degree_to_wavelength(degree):
 
-    degreeMin = 33.0
-    degreeMax = 48.0
-    degreeRange = degreeMax - degreeMin
-    wavelMin = 380
-    wavelMax = 780
-    wavelRange = wavelMax - wavelMin
+    degree_min = 33.0
+    degree_max = 48.0
+    degree_range = degree_max - degree_min
+    wavel_min = 380
+    wavel_max = 780
+    wavel_range = wavel_max - wavel_min
 
-    wavelength = (((degree - degreeMin) * wavelRange) / degreeRange) + wavelMin
+    wavelength = (((degree - degree_min) * wavel_range) /
+                  degree_range) + wavel_min
 
     return wavelength
 
 
-def normalizeIntegerColor(IntensityMax, factor, gamma, color):
+def normalize_integer_color(intensity_max, factor, gamma, color):
 
     color = abs(color)
 
-    color = round(IntensityMax * pow(color * factor, gamma))
+    color = round(intensity_max * pow(color * factor, gamma))
 
     color = min(255, color)
     color = max(0, color)
@@ -40,28 +41,28 @@ def normalizeIntegerColor(IntensityMax, factor, gamma, color):
     return color
 
 
-def rgbToHexa(red, green, blue):
+def rgb_to_hexa(red, green, blue):
 
     red = format(red, 'x')
     green = format(green, 'x')
     blue = format(blue, 'x')
 
-    list = [red, green, blue]
+    color_list = [red, green, blue]
 
-    for x in range(len(list)):
-        if len(list[x]) < 2:
-            list[x] = "0" + list[x]
+    for x in range(len(color_list)):
+        if len(color_list[x]) < 2:
+            color_list[x] = "0" + color_list[x]
 
-    hexString = ""
-    for x in list:
-        hexString = hexString + x
+    hexa_rgb = ""
+    for x in color_list:
+        hexa_rgb = hexa_rgb + x
 
-    return hexString
+    return hexa_rgb
 
 
-def wavelengthToRGB(wavelength):
+def wavel_to_rgb(wavelength):
     gamma = 0.80
-    IntensityMax = 255
+    intensity_max = 255
     factor = 0.0
     red = 0
     green = 0
@@ -109,25 +110,25 @@ def wavelengthToRGB(wavelength):
         factor = 0.3 + 0.7 * (780 - wavelength)/(780 - 700)
 
     if (red != 0):
-        red = normalizeIntegerColor(IntensityMax, factor, gamma, red)
+        red = normalize_integer_color(intensity_max, factor, gamma, red)
 
     if (green != 0):
-        green = normalizeIntegerColor(IntensityMax, factor, gamma, green)
+        green = normalize_integer_color(intensity_max, factor, gamma, green)
 
     if (blue != 0):
-        blue = normalizeIntegerColor(IntensityMax, factor, gamma, blue)
+        blue = normalize_integer_color(intensity_max, factor, gamma, blue)
 
-    hexaRGB = rgbToHexa(red, green, blue)
+    hexa_rgb = rgb_to_hexa(red, green, blue)
 
-    return hexaRGB
+    return hexa_rgb
 
 
-def setLedColor(watercoolers, wc_liquid_temp):
+def set_led_color(watercoolers, wc_liquid_temp):
     if len(watercoolers) == 1:
         device = watercoolers[0]
 
-        wavelength = assignDegreeToWavelength(wc_liquid_temp)
-        color = wavelengthToRGB(wavelength)
+        wavelength = assign_degree_to_wavelength(wc_liquid_temp)
+        color = wavel_to_rgb(wavelength)
 
         map_color = map(color_from_str, {color})
 
@@ -139,7 +140,7 @@ def setLedColor(watercoolers, wc_liquid_temp):
 ###
 
 
-def setFanSpeed(watercoolers, degree):
+def set_fan_speed(watercoolers, degree):
     status = ""
     if len(watercoolers) == 1:
         device = watercoolers[0]
@@ -194,21 +195,21 @@ def initialize():
                 # connect
                 result = device.connect()
                 device.initialize()
-            except:
+            except Exception as err:
+                print("An error have happened: ", err)
                 time.sleep(3)
-                pass
 
         return watercoolers
     else:
         return 0
 
 
-def listAverage(list):
+def list_average(list):
     average = sum(list) / len(list)
     return average
 
 
-def removeFirstAddLast(list, last):
+def remove_first_add_last(list, last):
     del list[0]
     list.append(last)
     return list
@@ -233,18 +234,18 @@ if __name__ == '__main__':
                 cpu_last_degrees = [cpu_degree, cpu_degree,
                                     cpu_degree, cpu_degree, cpu_degree]
 
-            wc_last_degrees = removeFirstAddLast(
+            wc_last_degrees = remove_first_add_last(
                 wc_last_degrees, wc_degree)
-            cpu_last_degrees = removeFirstAddLast(
+            cpu_last_degrees = remove_first_add_last(
                 cpu_last_degrees, cpu_degree)
 
-            wc_average_degree = listAverage(wc_last_degrees)
-            cpu_average_degree = listAverage(cpu_last_degrees)
+            wc_average_degree = list_average(wc_last_degrees)
+            cpu_average_degree = list_average(cpu_last_degrees)
             weighed_average_degree = (
                 wc_average_degree + (cpu_average_degree*0.85))/2
 
-            ledStatus = setLedColor(watercoolers, wc_average_degree)
-            fanStatus = setFanSpeed(watercoolers, weighed_average_degree)
+            ledStatus = set_led_color(watercoolers, wc_average_degree)
+            fanStatus = set_fan_speed(watercoolers, weighed_average_degree)
 
             print("Liquid temp ", wc_degree)
             print("CPU temp", cpu_degree)
