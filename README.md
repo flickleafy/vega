@@ -8,7 +8,7 @@ It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis.
 The first version was made in bash, with parts of internal calculations using Python, and parts using bc.
 The second version is entirely made in Python.
 
-# Cababilities
+# Capabilities
 
 1. Dynamic control lighting gradually using math formulas. First assign a degree to a wavelength, convert wavelength to RGB, and then RGB to Hexadecimal RGB.
 2. Dynamic control Fan speed gradually based on temperatures using math formulas.
