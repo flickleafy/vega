@@ -1,6 +1,6 @@
-# VEGA - Dynamic cooling, lighthing and clocking controller
+# VEGA - Dynamic cooling, lighting and clocking controller
 
-A dynamic watercooler, cpu, and gpu temperature controller. Should work in any Linux.
+A dynamic cooling (watercooler, cpu, and gpu) controller, dynamic lighting controller (any device supported by openRGB), and dynamic cpu clocking controller. Should work in any Linux that supports the project dependencies.
 
 # Dependencies
 
