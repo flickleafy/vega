@@ -1,41 +1,67 @@
-# VEGA - Simple dynamic watercooler controller
+# VEGA - Dynamic cooling, lighthing and clocking controller
 
-A simple dynamic watercooler controller. Should work in any Linux.
+A dynamic watercooler, cpu, and gpu temperature controller. Should work in any Linux.
 
 # Dependencies
 
-It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis.
-The first version was made in bash, with parts of internal calculations using Python, and parts using bc.
-The second version is entirely made in Python.
+It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis for the watercooler controlling and [nvidia-settings]/[nvidia-smi] for gpu temperature controlling.
+It uses [openRGB]() for ligthing controlling for RAM, Motherboard, and couple other devices supported by openRGB.
+It uses [nvidia-settings]/[nvidia-smi] to controll gpu fans, and in the future, it is planned to controll other gpus parameters.
 
 # Capabilities
 
-1. Dynamic control lighting gradually using math formulas. First assign a degree to a wavelength, convert wavelength to RGB, and then RGB to Hexadecimal RGB.
-2. Dynamic control Fan speed gradually based on temperatures using math formulas.
-3. Control any watercooler that is supported by liquidctl
-4. Smooth transitions, averaging the last 4 temperature values.
+1. Dynamic control lighting gradually using math formula (first assign a degree to a wavelength, convert wavelength to RGB, and then RGB to Hexadecimal RGB).
+2. Dynamic control Fan speed gradually based on temperatures using math formula.
+3. Control any watercooler that is supported by liquidctl.
+4. Smooth transitions, averaging the last recorded temperature values.
+5. Control GPU individual fans (for Nvidia compatible GPUs), monitoring temperature and calculating an optimal speed.
+6. Control CPU clocking by changing the power plan based in key applications that may be running.
+7. Control CPU clocking by changing the power plan based in limit of CPU temperatures.
 
 # Installation
 
-One possible way to keep it running in background is using cronjob.
+## Server-side configuration
+
+### Cronjob configuration (as root) for vega-server-root
 
 On terminal, run:
 
-    sudo crontab -e
+> sudo crontab -e
 
 In the editor that is opened, you can type this:
 
-## For bash version
-
-> @reboot /path/to/file/watercooler.sh
+> @reboot /path/to/file/vega-server-root >> /path/to/file/vega-server-root.log 2>&1
 
 - **@reboot:** this will start the script as soon Linux is loaded
 - **/path/to/file/:** this is where the script is located
-
-## For Python version
-
-> @reboot $(which python3) /path/to/file/watercooler.py >> /path/to/file/watercooler.log 2>&1
-
-- **$(which python3)** this gets the location from Python
-- **>>** this will append the output from the script to the watercooler.log
+- **>>** this will append the output from the script to the vega-server-root.log
 - **2>&1** this gets the standard output and the error output to the same log.
+
+### Startup configuration for vega-server-user
+
+> sh -c "/path/to/file/vega-server-user >> /path/to/file/vega-server-user.log 2>&1"
+
+### Startup configuration for vega-server-gateway
+
+> sh -c "/path/to/file/vega-server-gateway >> /path/to/file/vega-server-gateway.log 2>&1"
+
+
+## Client-side configuration
+
+Startup configuration for client-side app.
+
+> sh -c "/path/to/file/vega-server-user >> /path/to/file/vega-server-user.log 2>&1"
+
+# Package building
+
+From root of the project:
+
+## For Python Vega-server
+
+> pyinstaller -F -n vega-server-gateway vega_server/gateway/main.py
+> pyinstaller -F -n vega-server-root vega_server/rootspace/main.py
+> pyinstaller -F -n vega-server-user vega_server/userspace/main.py
+
+## For Python Vega-client
+
+> pyinstaller -F -n vega-client vega_client/main.py
