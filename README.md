@@ -4,8 +4,8 @@ A dynamic cooling (watercooler, cpu, and gpu) controller, dynamic lighting contr
 
 # Dependencies
 
-It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis for the watercooler controlling.
-It uses [openRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) for ligthing controlling for RAM, Motherboard, and couple other devices supported by openRGB.
+It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis for the watercooler controlling.\
+It uses [openRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) for ligthing controlling for RAM, Motherboard, and couple other devices supported by openRGB.\
 It uses [nvidia-settings]()/[nvidia-smi]() to controll gpu temperature and fans, and in the future, it is planned to controll other GPU parameters.
 
 # Capabilities
@@ -59,7 +59,9 @@ From root of the project:
 ## For Python Vega-server
 
 > pyinstaller -F -n vega-server-gateway vega_server/gateway/main.py
+
 > pyinstaller -F -n vega-server-root vega_server/rootspace/main.py
+
 > pyinstaller -F -n vega-server-user vega_server/userspace/main.py
 
 ## For Python Vega-client
