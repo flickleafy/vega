@@ -1,3 +1,5 @@
-snipet.py
-watercooler.sh
-tensor.py
+__pycache__
+build
+dist
+others
+*.spec
