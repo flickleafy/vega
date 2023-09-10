@@ -4,9 +4,9 @@ A dynamic cooling (watercooler, cpu, and gpu) controller, dynamic lighting contr
 
 # Dependencies
 
-It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis for the watercooler controlling and [nvidia-settings]/[nvidia-smi] for gpu temperature controlling.
-It uses [openRGB]() for ligthing controlling for RAM, Motherboard, and couple other devices supported by openRGB.
-It uses [nvidia-settings]/[nvidia-smi] to controll gpu fans, and in the future, it is planned to controll other gpus parameters.
+It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis for the watercooler controlling.
+It uses [openRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) for ligthing controlling for RAM, Motherboard, and couple other devices supported by openRGB.
+It uses [nvidia-settings]()/[nvidia-smi]() to controll gpu temperature and fans, and in the future, it is planned to controll other GPU parameters.
 
 # Capabilities
 
