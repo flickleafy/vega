@@ -67,3 +67,16 @@ From root of the project:
 ## For Python Vega-client
 
 > pyinstaller -F -n vega-client vega_client/main.py
+
+
+# Development
+
+## Virtual environment 
+
+> sudo apt install python3.10-venv
+ 
+> python -m venv vega_env
+
+> source vega_env/bin/activate
+
+> ./build_modules.sh
