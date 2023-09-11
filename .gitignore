@@ -3,3 +3,4 @@ build
 dist
 others
 *.spec
+vega_env
