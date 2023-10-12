@@ -3,3 +3,6 @@ build
 dist
 others
 *.spec
+vega_env
+package_modules
+*.egg-info
