@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Exec=sh -c "/home/xxx/Documents/vega-server-user >> /home/xxx/Documents/vega-server-user.log 2>&1"
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name[en_US]=Vega Server User
+Name=Wc Server
+Comment[en_US]=
+Comment=
