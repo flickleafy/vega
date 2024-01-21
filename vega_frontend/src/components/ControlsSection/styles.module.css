@@ -1,0 +1,37 @@
+/* styles.module.css */
+.controlsContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Three columns of equal width */
+  gap: 20px; /* Space between the columns */
+  padding: 20px;
+  align-items: start; /* Align the content to the start of each cell */
+  position: relative; /* Needed for positioning pseudo-elements */
+  border: 1px solid #555;
+  border-radius: 20px;
+  margin-top: 25px;
+}
+
+.controlsContainer::before,
+.controlsContainer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #555; /* Color of the divider lines */
+}
+
+.controlsContainer::before {
+  left: calc(33.333%); /* Position the line after the first column */
+}
+
+.controlsContainer::after {
+  right: calc(33.333% + 10px); /* Position the line before the last column */
+}
+
+.sectionTitle {
+  text-transform: uppercase;
+  color: #ccc; /* Grey color for the titles */
+  font-size: 0.85rem; /* Small font size for the titles */
+  margin-bottom: 10px; /* Space below the title */
+}

@@ -1,0 +1,55 @@
+.displayPanelContainer {
+  display: flex; /* Use flexbox to align label and value */
+  align-items: center; /* Center items vertically */
+  grid-gap: 20px;
+}
+
+.displayPanelLabel {
+  display: flex;
+  color: #fff; /* Light text color for visibility */
+  font-size: 0.9rem; /* Adjust font size */
+  font-weight: bold; /* Make label bold */
+  width: 50px;
+  justify-content: center;
+}
+
+.displayPanelMeter {
+  background-color: #333; /* Dark background for the panel */
+  border-radius: 5px; /* Slightly rounded corners */
+  padding: 10px; /* Spacing inside the panel */
+  margin: 5px 0; /* Space between panels */
+  display: flex; /* Use flexbox to align label and value */
+  gap: 5px; /* Separate blocks */
+  align-items: center; /* Center items vertically */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); /* Soft shadow for depth */
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.displayPanelFilledBlock {
+  background-color: #00ff00; /* Green phosphorus color */
+  width: 5%; /* Assuming 10 blocks in the meter */
+  height: 10px;
+  /* Glow effect */
+  /* Horizontal shadow, Vertical shadow, Blur, Color */
+  box-shadow: 0 0 2px #00ff00, 0 0 3px #00ff00;
+  /* Slight blur effect */
+  filter: blur(1px); /* Adjust the blur radius as needed */
+}
+
+.displayPanelEmptyBlock {
+  background-color: #5c5c5c;
+  width: 5%; /* Assuming 10 blocks in the meter */
+  height: 10px;
+}
+
+.displayPanelValue {
+  display: flex;
+  background-color: #444; /* Slightly lighter background for value display */
+  color: #fff; /* Light text color for visibility */
+  padding: 5px 10px; /* Padding inside the value display */
+  border-radius: 3px; /* Rounded corners for value display */
+  text-align: right; /* Align the value text to the right */
+  min-width: 60px; /* Minimum width for the value display */
+  font-family: 'Courier New', monospace; /* Monospaced font for values */
+}

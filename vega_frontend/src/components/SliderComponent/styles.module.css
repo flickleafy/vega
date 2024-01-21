@@ -1,0 +1,70 @@
+/* styles.module.css */
+.sliderContainer {
+  display: flex; /* Use flex layout for alignment */
+  grid-gap: 15px;
+  flex-direction: row;
+  align-items: flex-start; /* Align items to the start of the flex container */
+  margin-bottom: 15px; /* Space between each slider */
+}
+
+.sliderLabelLeft {
+  color: #aaa; /* Light grey color for the label */
+  margin-bottom: 5px; /* Small space between label and slider */
+  font-size: 1.1rem; /* A smaller font size for the label */
+  text-align: left; /* Align the value to the center */
+}
+
+.sliderLabelRight {
+  color: #aaa; /* Light grey color for the label */
+  margin-bottom: 5px; /* Small space between label and slider */
+  font-size: 0.9rem; /* A smaller font size for the label */
+  text-align: center; /* Align the value to the center */
+  font-family: 'Courier New', monospace;
+}
+
+.firstCell {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.secondCell {
+  display: flex;
+  flex-direction: column;
+  width: 60px;
+}
+.rangeInput {
+  -webkit-appearance: none; /* Override default appearance */
+  width: 100%; /* Full width of the parent */
+  height: 5px; /* Specified height for the slider track */
+  border-radius: 5px; /* Rounded corners for the track */
+  background: #222; /* Dark background for the track */
+  outline: none; /* Remove the outline */
+  opacity: 0.7; /* Slightly transparent track */
+  -webkit-transition: opacity 0.2s; /* Smooth transition for hover effect */
+  transition: opacity 0.2s; /* Smooth transition for hover effect */
+  margin-top: 10px;
+}
+
+.rangeInput::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Override default appearance */
+  appearance: none;
+  width: 15px; /* Width of the thumb */
+  height: 15px; /* Height of the thumb */
+  border-radius: 50%; /* Circular thumb */
+  background: #7f7f7f; /* Grey color for the thumb */
+  cursor: pointer; /* Cursor to indicate it's draggable */
+  box-shadow: 0 0 4px #000; /* Shadow to make the thumb stand out */
+}
+
+.rangeInput:hover {
+  opacity: 1; /* Full opacity on hover */
+}
+
+.valueDisplay {
+  display: flex;
+  justify-content: center;
+  color: #aaa; /* White color for the value text */
+  font-size: 1rem; /* Smaller font size for the value */
+  margin-top: 3px; /* Space between slider and value */
+  font-family: 'Courier New', monospace;
+}
