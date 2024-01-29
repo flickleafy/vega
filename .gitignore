@@ -6,3 +6,5 @@ others
 vega_env
 package_modules
 *.egg-info
+node_modules
+vega_client/utils
