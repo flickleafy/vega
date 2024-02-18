@@ -20,7 +20,7 @@ export function connectToServer() {
   });
 
   client.on('data', (data) => {
-    // console.log('Received: ' + data.toString());
+    console.log('Received: ' + data.toString());
     if (mainWindow) {
       mainWindow.webContents.send('data', JSON.parse(data.toString()));
     }
