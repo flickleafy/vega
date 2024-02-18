@@ -2,7 +2,7 @@ import globals
 
 import socket
 
-from server.start_server import start_server
+from server.alternative_start_server import start_server
 
 
 def server_thread(_):
