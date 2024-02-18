@@ -8,7 +8,7 @@ It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis for the
 It uses [openRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) for ligthing controlling for RAM, Motherboard, and couple other devices supported by openRGB.\
 It uses [nvidia-settings]()/[nvidia-ml-py](https://pypi.org/project/nvidia-ml-py/) to controll gpu temperature and fans, and in the future, it is planned to controll other GPU parameters.
 
-# Capabilities
+# Features
 
 1. Dynamic control lighting gradually using math formula (first assign a degree to a wavelength, convert wavelength to RGB, and then RGB to Hexadecimal RGB).
 2. Dynamic control Fan speed gradually based on temperatures using math formula.
