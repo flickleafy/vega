@@ -1,8 +1,8 @@
 {
-  "name": "my-new-app",
-  "productName": "my-new-app",
+  "name": "vega_suit",
+  "productName": "vega_suit",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Vega Suit",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
