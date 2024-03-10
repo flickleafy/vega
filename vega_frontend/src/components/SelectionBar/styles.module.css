@@ -1,0 +1,35 @@
+/* SelectionBar.module.css */
+.selectionBar {
+  display: flex;
+  flex-direction: column;
+  row-gap: 5px;
+  padding: 6px; /* Padding around options */
+  border-top-left-radius: 15px;
+  border-bottom-left-radius: 15px;
+
+  background-color: #686868;
+  border-top: solid #3a3a3a;
+  border-left: solid #3a3a3a;
+  border-bottom: solid #3a3a3a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.option {
+  color: #ccc; /* Light text color */
+  padding: 8px; /* Padding for touch targets */
+  cursor: pointer; /* Pointer to indicate clickable items */
+  border-radius: 10px; /* Rounded corners */
+  font-size: large;
+
+  display: flex;
+  justify-content: center;
+}
+
+.option:hover {
+  background-color: #444; /* Slightly lighter on hover */
+}
+
+.selected {
+  background-color: #555; /* Selected option background */
+  color: #fff; /* Selected option text color */
+}
