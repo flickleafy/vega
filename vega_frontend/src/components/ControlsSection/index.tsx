@@ -2,10 +2,10 @@ import React, { ChangeEvent, useEffect, useState } from 'react';
 import SliderComponent from '../SliderComponent';
 import ToggleButton from '../ToggleButton';
 import styles from './styles.module.css';
-import { CoolingDataInterface } from '../../interfaces/CoolingDataInterface';
+import { DataInterface } from '../../interfaces/DataInterface';
 
 export interface ConstrolsSectionProps {
-  data: CoolingDataInterface;
+  data: DataInterface;
 }
 
 const ConstrolsSection = ({ data }: ConstrolsSectionProps) => {
@@ -22,8 +22,10 @@ const ConstrolsSection = ({ data }: ConstrolsSectionProps) => {
   useEffect(() => {
     if (data) {
       // data?.gpu0_degree && setTemperature(data.gpu0_degree);
-      data?.gpu0_c_fan_speed1 && setFanSpeed1(data.gpu0_c_fan_speed1);
-      data?.gpu0_c_fan_speed2 && setFanSpeed2(data.gpu0_c_fan_speed2);
+      data?.gpus[0].fans[0] &&
+        setFanSpeed1(data.gpus[0].fans[0].currentFanSpeed);
+      data?.gpus[0].fans[1] &&
+        setFanSpeed2(data.gpus[0].fans[1].currentFanSpeed);
     }
   }, [data]);
 

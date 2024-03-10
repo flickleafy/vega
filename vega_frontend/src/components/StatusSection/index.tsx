@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import DisplayPanel from '../DisplayPanel';
 import styles from './styles.module.css';
-import { CoolingDataInterface } from '../../interfaces/CoolingDataInterface';
+import { DataInterface } from '../../interfaces/DataInterface';
 
 export interface StatusSectionProps {
-  data: CoolingDataInterface;
+  data: DataInterface;
 }
 
 const StatusSection = ({ data }: StatusSectionProps) => {
@@ -16,10 +16,10 @@ const StatusSection = ({ data }: StatusSectionProps) => {
 
   useEffect(() => {
     if (data) {
-      data?.gpu0_degree && setTemperature(data.gpu0_degree);
-      data?.gpu0_degree && setGpuClock(data.gpu0_core_clock);
-      data?.gpu0_degree && setMemoryClock(data.gpu0_mem_clock);
-      data?.gpu0_degree && setCoreVoltage(data.gpu0_core_voltage);
+      data?.gpus[0] && setTemperature(data.gpus[0].currentDegree);
+      data?.gpus[0] && setGpuClock(data.gpus[0].coreClock);
+      data?.gpus[0] && setMemoryClock(data.gpus[0].ramClock);
+      data?.gpus[0] && setCoreVoltage(data.gpus[0].coreVoltage);
     }
   }, [data]);
 

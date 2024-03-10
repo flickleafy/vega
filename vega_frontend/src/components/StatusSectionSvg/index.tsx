@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import DisplayPanel from '../DisplayPanel';
 import styles from './styles.module.css';
-import { CoolingDataInterface } from '../../interfaces/CoolingDataInterface';
+import { DataInterface } from '../../interfaces/DataInterface';
 
 export interface StatusSectionProps {
-  data: CoolingDataInterface;
+  data: DataInterface;
 }
 
 const calculateDashArray = (value: number, max: number) => {
