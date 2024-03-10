@@ -1,0 +1,29 @@
+.mainApp {
+  background-color: #7a7a7a;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  column-gap: 15px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+}
+
+.mid {
+  flex: 3 1 auto;
+}
+
+.side {
+  flex: 0 1 0%;
+}
+
+.contentCenter {
+  justify-content: center;
+}
