@@ -1,4 +1,4 @@
-export interface CoolingDataInterface {
+export interface ApiDataDTO {
   gpu0_degree: number;
   gpu0_average_degree: number;
   gpu0_c_fan_speed1: number;
