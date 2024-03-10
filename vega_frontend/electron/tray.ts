@@ -1,6 +1,6 @@
 import { app, Tray, Menu, BrowserWindow } from 'electron';
 import path from 'path';
-const iconPath = path.join(__dirname, '../../assets/icons/icon.png');
+const iconPath = path.join(__dirname, '../../assets/icons/icon-32.png');
 
 export function createTray(
   tray: Tray | null,
