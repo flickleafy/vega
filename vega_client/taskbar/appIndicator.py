@@ -1,23 +1,24 @@
+import tempfile
+from PIL import Image
 import os
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('AppIndicator3', '0.1')
 gi.require_version('Notify', '0.7')
-
 from gi.repository import Gtk as gtk
 from gi.repository import GLib as glib
 from gi.repository import AppIndicator3 as appindicator
 from gi.repository import Notify as notify
-
 import globals
 
 APPINDICATOR_ID = 'vega_client'
 
 
 def app_indicator():
-    icon_dir = os.path.dirname(os.path.realpath(__file__)) + '/cpu_v.png'
+    icon_path = create_transparent_icon()
+
     indicator = appindicator.Indicator.new(
-        APPINDICATOR_ID, icon_dir, appindicator.IndicatorCategory.SYSTEM_SERVICES)
+        APPINDICATOR_ID, icon_path, appindicator.IndicatorCategory.SYSTEM_SERVICES)
 
     indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
 
@@ -78,3 +79,13 @@ def wc_temp(_):
 def quit(_):
     notify.uninit()
     gtk.main_quit()
+
+def create_transparent_icon(size=(1, 1)):
+    """Create a temporary transparent PNG icon and return its file path."""
+    # Create a transparent image
+    img = Image.new("RGBA", size, (255, 255, 255, 0))
+    # Generate a temporary file path
+    icon_path = os.path.join(tempfile.mkdtemp(), "transparent_icon.png")
+    # Save the image to the temporary path
+    img.save(icon_path, format="PNG")
+    return icon_path
