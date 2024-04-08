@@ -5,16 +5,23 @@ import GpuPage from './pages/GpuPage';
 import { DataInterface } from './interfaces/DataInterface';
 import { ApiDataDTO } from './interfaces/ApiDataDTO';
 import { apiDataAdapter } from './adapters/apiDataAdapter';
+import DashboardPage from './pages/DashboardPage';
 const { ipcRenderer } = window.electron;
 
 export function App() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DataInterface | null>(null);
-  const [selectedPage, setSelectedPage] = useState('GPU');
+  const [selectedPage, setSelectedPage] = useState('Dash');
   const pagesTitle = ['Dash', 'CPU', 'GPU'];
+
   const pagesComponents: Record<string, JSX.Element> = {
     CPU: <></>,
-    Dash: <></>,
+    Dash: (
+      <DashboardPage
+        key={0}
+        data={data}
+      />
+    ),
     GPU: (
       <GpuPage
         key={1}
@@ -24,7 +31,7 @@ export function App() {
   };
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 3000);
+    setTimeout(() => setLoading(false), 1500);
   }, []);
 
   useEffect(() => {

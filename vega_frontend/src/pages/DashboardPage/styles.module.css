@@ -1,0 +1,9 @@
+.dashboard {
+  color: #ffffff; /* White text */
+  padding: 20px;
+  display: flex;
+  flex-wrap: wrap; /* Enable wrapping of items */
+  gap: 20px; /* Space between cards */
+  justify-content: flex-start; /* Align items to the start of the container */
+  height: fit-content;
+}
