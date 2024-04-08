@@ -16,10 +16,13 @@ const fieldsDictionary: Record<string, string> = {
   watercooler: 'Watercooler',
   currentFanSpeed: 'Current Speed',
   setFanSpeed: 'Set Speed',
+  fanPercent: 'Fan %',
+  fanSpeed: 'Fan Speed',
+  pumpSpeed: 'Pump Speed',
+  arrayColor: 'Color',
 };
 
 export const dataToCardAdapter = (data: DataInterface): Devices => {
-  console.log('entry');
   const devicesRecord: Devices = {};
 
   Object.entries(data).forEach(([title, deviceData]) => {
@@ -29,38 +32,43 @@ export const dataToCardAdapter = (data: DataInterface): Devices => {
       });
     } else {
       const deviceTitle = fieldsDictionary[title];
-      console.log('devicetitle', deviceTitle, 'deviceData', deviceData);
-      devicesRecord[deviceTitle] = deviceData;
+      propertiesProcessor(deviceData, deviceTitle, null, devicesRecord);
     }
   });
-
-  // console.log(JSON.stringify(devicesRecord, null, 4));
   return devicesRecord;
 };
 
 function propertiesProcessor(
   deviceData: any,
   deviceTitle: string,
-  deviceIndex: number,
-  devicesRecord: Devices
+  deviceIndex: number | null,
+  devicesRecord: any
 ) {
-  // console.log('deviceData2', deviceData);
-  deviceTitle = `${fieldsDictionary[deviceTitle]} ${deviceIndex + 1}`;
+  if (deviceIndex !== null) {
+    deviceTitle = `${fieldsDictionary[deviceTitle]} ${deviceIndex + 1}`;
+  }
   devicesRecord[deviceTitle] = {};
 
   Object.entries(deviceData).forEach(([title, propertyData]) => {
     if (Array.isArray(propertyData)) {
-      propertyData.forEach((propertyData1, propertyIndex) => {
-        const propertyTitle = `${fieldsDictionary[title]} ${propertyIndex + 1}`;
-        // console.log('title', title);
-        devicesRecord[deviceTitle][propertyTitle] = propertyData1;
-        // console.log('propertyDataArray', propertyTitle, propertyData1);
-      });
+      if (title === 'arrayColor') {
+        const propertyTitle = fieldsDictionary[title];
+        devicesRecord[deviceTitle][
+          propertyTitle
+        ] = `${propertyData[0]} ${propertyData[1]} ${propertyData[2]}`;
+      } else {
+        propertyData.forEach((propertyData1, propertyIndex) => {
+          propertiesProcessor(
+            propertyData1,
+            title,
+            propertyIndex,
+            devicesRecord[deviceTitle]
+          );
+        });
+      }
     } else {
       const propertyTitle = fieldsDictionary[title];
-      // console.log('propertyDataNonArray', propertyTitle, propertyData);
       devicesRecord[deviceTitle][propertyTitle] = deviceData[title];
-      // devicesRecord[deviceTitle] = propertyData;
     }
   });
 }
