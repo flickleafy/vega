@@ -2,7 +2,7 @@ import { DataInterface } from '../../interfaces/DataInterface';
 import { Devices, Properties } from './interfaces';
 
 const fieldsDictionary: Record<string, string> = {
-  currentDegree: 'Degree',
+  currentDegree: 'Current Degree',
   averageDegree: 'Aver. Degree',
   coreClock: 'Core Clock',
   coreVoltage: 'Core Volt.',
@@ -14,11 +14,11 @@ const fieldsDictionary: Record<string, string> = {
   gpus: 'Gpu',
   cpu: 'Cpu',
   watercooler: 'Watercooler',
-  currentFanSpeed: 'Current Speed',
-  setFanSpeed: 'Set Speed',
+  currentFanSpeed: 'Current Speed %',
+  setFanSpeed: 'Set Speed %',
   fanPercent: 'Fan %',
-  fanSpeed: 'Fan Speed',
-  pumpSpeed: 'Pump Speed',
+  fanSpeed: 'Fan Speed RPM',
+  pumpSpeed: 'Pump Speed RPM',
   arrayColor: 'Color',
 };
 
