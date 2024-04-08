@@ -22,7 +22,9 @@ const fieldsDictionary: Record<string, string> = {
   arrayColor: 'Color',
 };
 
-export const dataToCardAdapter = (data: DataInterface): Devices => {
+export const rawDataToCardDataFormatAdapter = (
+  data: DataInterface
+): Devices => {
   const devicesRecord: Devices = {};
 
   Object.entries(data).forEach(([title, deviceData]) => {

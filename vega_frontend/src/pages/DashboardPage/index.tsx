@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { DataInterface } from '../../interfaces/DataInterface';
 import styles from './styles.module.css';
 import StatusCard from '../../components/StatusCard';
-import { dataToCardAdapter } from './dataAdapter';
+import { rawDataToCardDataFormatAdapter } from './dataAdapter';
 import { Devices, Properties } from './interfaces';
 
 interface DashboardPageProps {
@@ -17,7 +17,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ data }) => {
   const [cards, setCards] = useState<Devices>({});
   useEffect(() => {
     if (data) {
-      const array = dataToCardAdapter(data);
+      const array = rawDataToCardDataFormatAdapter(data);
       setCards(array);
     }
   }, [data]);
