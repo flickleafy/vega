@@ -1,0 +1,64 @@
+.card {
+  background-color: #555; /* Slightly lighter than the page background */
+  border-radius: 10px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2); /* subtle shadow */
+  color: #ffffff; /* White text */
+}
+
+.card {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px; /* Minimum width for each card */
+  max-width: 300px;
+  gap: 5px 0px;
+  height: fit-content;
+}
+
+.cardTitle {
+  font-size: 1.2em;
+  margin-bottom: 10px;
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metricTitle {
+  font-weight: bold;
+}
+
+.metricValue {
+  font-weight: normal;
+}
+
+.toggle {
+  /* Style for toggle switch */
+}
+
+.graph {
+  /* Style for graph, assuming you are using a library you will likely need to override some styles here */
+}
+
+.editButton {
+  align-self: center;
+  margin-top: auto;
+  background-color: #0066ff; /* Bright accent color */
+  color: #ffffff;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.editButton:hover {
+  background-color: #0056e0; /* Darker shade on hover */
+}
