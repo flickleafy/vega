@@ -1,7 +1,7 @@
 import watercooler.cpuDegreeToSpeed as cpuDegreeToSpeed
 
 
-def set_wc_fan_speed(watercoolers, degree):
+def set_wc_fan_speed(devices, index, degree):
     """_summary_
 
     Args:
@@ -11,8 +11,8 @@ def set_wc_fan_speed(watercoolers, degree):
     Returns:
         _type_: _description_
     """
-    if len(watercoolers) == 1:
-        device = watercoolers[0]
+    if len(devices) > 0:
+        device = devices[index]
 
         speed = cpuDegreeToSpeed.degree_to_speed(degree)
 
