@@ -2,7 +2,7 @@ import socket
 import time
 import threading
 import json
-from utils.datetime import get_current_time
+from vega_common.utils.datetime_utils import get_current_time
 
 
 def start_server(address, port, server_name, send_data_1, send_data_2):

@@ -1,6 +1,6 @@
 
 import gpucooler.nvidiaex.parseXconfig as parse_xconfig
-import utils.filesManipulation as files
+import vega_common.utils.files_manipulation as files
 
 
 def displays_has_coolbits():

@@ -1,7 +1,7 @@
 import globals
 import copy
 
-import utils.listProcess as listProcess
+import vega_common.utils.list_process as listProcess
 import time
 import gpucooler.gpu_control.gpuTemp as gpuTemp
 import gpucooler.gpu_control.gpuStatus as gpuStatus

@@ -2,7 +2,7 @@
 # nvidia-settings -a [gpu:0]/GPUFanControlState=1 -a [fan:0]/GPUTargetFanSpeed=20
 import gpucooler.gpu_control.gpuDegreeToSpeed as gpuDegreeToSpeed
 from globals import ERROR_MESSAGE
-import utils.subProcess as sub_process
+import vega_common.utils.sub_process as sub_process
 from typing import Optional
 import gpucooler.nvidiaex.pynvml as pynvml
 

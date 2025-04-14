@@ -2,7 +2,7 @@ import time
 import socket
 import json
 import errno
-from utils.datetime import get_current_time
+from vega_common.utils.datetime_utils import get_current_time
 
 
 def data_reception_loop(client_socket, server_name, received_data):
