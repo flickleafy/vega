@@ -1,7 +1,7 @@
 import globals
 
 import time
-import utils.listProcess as listProcess
+import vega_common.utils.list_process as listProcess
 import watercooler.wcStatus as wcStatus
 import watercooler.cpuStatus as cpuStatus
 import lighting.lightingColor as lightingColor

@@ -1,6 +1,6 @@
 import gpucooler.nvidiaex.parseXconfig as parse_xconfig
 from globals import ERROR_MESSAGE
-import utils.filesManipulation as files
+import vega_common.utils.files_manipulation as files
 
 
 def layout_has_multi_screens():

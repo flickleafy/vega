@@ -1,0 +1,34 @@
+"""
+Vega Common Library
+
+This package provides shared utilities and functions used across the different
+components of the Vega project (rootspace, userspace, gateway, and client).
+
+The library follows clean architecture principles and implements best practices
+for error handling, performance optimization, and code reusability.
+
+Available modules:
+- files_manipulation: File handling utilities with robust error handling
+- list_process: List manipulation and processing utilities
+- datetime_utils: Date and time formatting and manipulation functions
+- sub_process: Shell command execution with various security and error handling options
+
+Usage:
+    # Import specific utilities
+    from vega_common.utils.files_manipulation import read_file, write_file
+    from vega_common.utils.list_process import list_average
+    from vega_common.utils.sub_process import run_cmd
+    from vega_common.utils.datetime_utils import get_current_time
+    
+    # Or use shortcuts from the root package
+    from vega_common import read_file, list_average, get_current_time
+"""
+
+# Import common utilities for easier access
+from vega_common.utils.files_manipulation import read_file, write_file, safe_open, ensure_directory_exists
+from vega_common.utils.list_process import list_average, remove_first_add_last, safe_get, create_sliding_window
+from vega_common.utils.sub_process import run_cmd, run_cmd_with_status, run_cmd_sudo
+from vega_common.utils.datetime_utils import get_current_time, get_timestamp, format_duration, is_older_than
+
+__version__ = '0.1.0'
+__author__ = 'Vega Team'

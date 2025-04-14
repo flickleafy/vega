@@ -3,7 +3,7 @@
 # schedutil
 # performance
 from globals import ERROR_MESSAGE
-import utils.subProcess as sub_process
+import vega_common.utils.sub_process as sub_process
 
 
 def set_powerplan(powerplan):
