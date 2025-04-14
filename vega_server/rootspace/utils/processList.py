@@ -32,7 +32,7 @@ def get_process_list():
             # Get process name
             process_name = process.name().lower()
             process_set.add(process_name)
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
 
     filtered_process_set = set()

@@ -6,7 +6,7 @@ import time
 from globals import ERROR_MESSAGE
 
 
-def get_wc_status(watercoolers):
+def get_wc_status(devices, index):
     """_summary_
 
     Args:
@@ -15,11 +15,12 @@ def get_wc_status(watercoolers):
     Returns:
         _type_: _description_
     """
-    wcstatus = ''
-    if len(watercoolers) == 1:
-        device = watercoolers[0]
-        wcstatus = device.get_status()
-    return wcstatus
+    device_status = ''
+    
+    device = devices[index]
+    device_status = device.get_status()
+    
+    return device_status
 
 
 def wc_initialize():
@@ -28,20 +29,19 @@ def wc_initialize():
     Returns:
         _type_: _description_
     """
-    watercoolers = list(liquidAPI.find_liquidctl_devices())
-    if len(watercoolers) > 0:
-        device = watercoolers[0]
+    devices = list(liquidAPI.find_liquidctl_devices())
+    if len(devices) > 0:
+        for index, device in enumerate(devices):
+            result = None
+            while result is None:
+                try:
+                    # connect
+                    result = device.connect()
+                    device.initialize()
+                except Exception as err:
+                    print(ERROR_MESSAGE, err)
+                    time.sleep(3)
 
-        result = None
-        while result is None:
-            try:
-                # connect
-                result = device.connect()
-                device.initialize()
-            except Exception as err:
-                print(ERROR_MESSAGE, err)
-                time.sleep(3)
-
-        return watercoolers
+        return devices
     else:
         return 0

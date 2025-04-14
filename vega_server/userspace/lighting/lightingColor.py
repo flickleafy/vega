@@ -160,7 +160,7 @@ def wavel_to_rgb(wavelength: float, degree: float) -> str:  # NOSONAR
     return hexa_rgb
 
 
-def set_led_color(watercoolers, wc_liquid_temp: float):
+def set_led_color(devices, index, wc_liquid_temp: float):
     """_summary_
 
     Args:
@@ -170,8 +170,9 @@ def set_led_color(watercoolers, wc_liquid_temp: float):
     Returns:
         _type_: _description_
     """
-    if len(watercoolers) == 1:
-        device = watercoolers[0]
+    array_color = [0, 0, 0]
+    if len(devices) > 0:
+        device = devices[index]
 
         wavelength = assign_degree_to_wavelength(wc_liquid_temp)
         hexa_rgb = wavel_to_rgb(wavelength, wc_liquid_temp)
