@@ -1,33 +1,21 @@
+"""
+Temperature to fan speed conversion functions for GPU cooling.
+
+This module provides functionality to convert GPU temperature readings to 
+appropriate fan speed settings for optimal cooling.
+"""
+from vega_common.utils.temperature_utils import gpu_temp_to_fan_speed as common_gpu_temp_to_fan_speed
+
 
 def degree_to_speed(degree, modifier):
-    """_summary_
-
-    Args:
-        degree (_type_): _description_
-
-    Returns:
-        _type_: _description_
     """
-    speed = 0
-
-    # NOSONAR
-    # if degree <= 40:
-    #     speed = round(degree + 1.5)
-
-    # elif (degree > 40) and (degree <= 50):
-    #     speed = round(degree * (1 + ((0.10 + modifier) * (degree - 40))))
-    #     speed = min(100, speed)
-
-    # elif (degree > 50) and (degree <= 60):
-    #     speed = round(degree * 1.6)
-    #     speed = min(100, speed)
-
-    # else:
-    #     speed = 100
-
-    degree = degree * (1 + modifier)
-    speed = round(((5 * degree) - 100) * 0.5)
-    speed = min(100, speed)
-    speed = max(0, speed)
-
-    return speed
+    Convert GPU temperature to fan speed percentage.
+    
+    Args:
+        degree (float): GPU temperature in degrees Celsius
+        modifier (float): Adjustment factor for the fan curve
+        
+    Returns:
+        int: Fan speed percentage (0-100)
+    """
+    return common_gpu_temp_to_fan_speed(degree, modifier)

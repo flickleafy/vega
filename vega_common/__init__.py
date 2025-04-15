@@ -12,6 +12,8 @@ Available modules:
 - list_process: List manipulation and processing utilities
 - datetime_utils: Date and time formatting and manipulation functions
 - sub_process: Shell command execution with various security and error handling options
+- color_utils: Color conversion and manipulation functions
+- temperature_utils: Temperature conversion and calculation utilities
 
 Usage:
     # Import specific utilities
@@ -19,9 +21,11 @@ Usage:
     from vega_common.utils.list_process import list_average
     from vega_common.utils.sub_process import run_cmd
     from vega_common.utils.datetime_utils import get_current_time
+    from vega_common.utils.color_utils import rgb_to_hsv, hsv_to_rgb
+    from vega_common.utils.temperature_utils import estimate_cpu_from_liquid_temp
     
     # Or use shortcuts from the root package
-    from vega_common import read_file, list_average, get_current_time
+    from vega_common import read_file, list_average, get_current_time, rgb_to_hsv
 """
 
 # Import common utilities for easier access
@@ -29,6 +33,14 @@ from vega_common.utils.files_manipulation import read_file, write_file, safe_ope
 from vega_common.utils.list_process import list_average, remove_first_add_last, safe_get, create_sliding_window
 from vega_common.utils.sub_process import run_cmd, run_cmd_with_status, run_cmd_sudo
 from vega_common.utils.datetime_utils import get_current_time, get_timestamp, format_duration, is_older_than
+from vega_common.utils.color_utils import (
+    rgb_to_hsv, hsv_to_rgb, rgb_to_hex, hex_to_rgb,
+    shift_hue, adjust_brightness, normalize_color_value
+)
+from vega_common.utils.temperature_utils import (
+    celsius_to_fahrenheit, fahrenheit_to_celsius,
+    estimate_cpu_from_liquid_temp, calculate_safe_fan_speed
+)
 
 __version__ = '0.1.0'
 __author__ = 'Vega Team'

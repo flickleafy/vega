@@ -1,27 +1,10 @@
+"""
+List processing utilities for the rootspace component.
 
-def list_average(list):
-    """_summary_
+This module re-exports list processing functions from the vega_common library
+to maintain backward compatibility while reducing code duplication.
+"""
+from vega_common.utils.list_process import list_average, remove_first_add_last, safe_get, create_sliding_window
 
-    Args:
-        list (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
-    average = sum(list) / len(list)
-    return average
-
-
-def remove_first_add_last(list, last):
-    """_summary_
-
-    Args:
-        list (_type_): _description_
-        last (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
-    del list[0]
-    list.append(last)
-    return list
+# These functions are now imported directly from vega_common.utils.list_process
+# Keeping this file for backward compatibility
