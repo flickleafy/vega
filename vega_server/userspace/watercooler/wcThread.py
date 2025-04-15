@@ -2,6 +2,7 @@ import globals
 
 import time
 import vega_common.utils.list_process as listProcess
+from vega_common.utils.temperature_utils import estimate_cpu_from_liquid_temp
 import watercooler.wcStatus as wcStatus
 import watercooler.cpuStatus as cpuStatus
 import lighting.lightingColor as lightingColor
@@ -13,16 +14,20 @@ FAN_SPEED_ROW = 1
 PUMP_SPEED_ROW = 2
                 
 def watercooler_thread(_):
-    """_summary_
+    """Monitor and control watercooler system.
+    
+    This thread continuously monitors watercooling system metrics (liquid temperature,
+    fan speed, pump speed) and CPU temperature, and adjusts fan speeds and lighting
+    based on temperature readings.
 
     Args:
-        _ (_type_): _description_
+        _ (int): Unused argument, maintained for thread function signature consistency.
 
     Raises:
-        SystemExit: _description_
+        SystemExit: If no compatible watercooling devices are found.
 
     Returns:
-        null: simple thread with no returns
+        None: This thread runs continuously.
     """
     wc_last_temps = 0
     cpu_last_temps = 0
@@ -90,9 +95,17 @@ def watercooler_thread(_):
     else:
         raise SystemExit(
             'no devices matches available drivers and selection criteria')
-    return null
+    return None
 
 
 def estimate_from_wc_temp(wc_temp):
-    cpu_temp = (-727.5 + (30 * wc_temp)) / 7.5
-    return cpu_temp
+    """
+    Estimate CPU temperature based on liquid cooling temperature.
+    
+    Args:
+        wc_temp (float): Water cooler liquid temperature in Celsius
+    
+    Returns:
+        float: Estimated CPU temperature
+    """
+    return estimate_cpu_from_liquid_temp(wc_temp)

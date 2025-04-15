@@ -1,18 +1,20 @@
-import colorsys
 from liquidctl.util import color_from_str
+from vega_common.utils.color_utils import rgb_to_hsv, hsv_to_rgb, rgb_to_hex as rgb_to_hexa, normalize_color_value
 
 degree_min = 30.0
 degree_max = 46.0
 
 
 def assign_degree_to_wavelength(degree: float) -> float:
-    """_summary_
-
+    """Convert a temperature degree to a light wavelength value.
+    
+    Maps temperature range (degree_min to degree_max) to wavelength range (380nm to 780nm).
+    
     Args:
-        degree (_type_): _description_
-
+        degree (float): Temperature in degrees Celsius
+        
     Returns:
-        _type_: _description_
+        float: Corresponding wavelength in nanometers
     """
     degree_range = degree_max - degree_min
     wavel_min = 380
@@ -31,64 +33,34 @@ def assign_degree_to_wavelength(degree: float) -> float:
 
 
 def normalize_integer_color(intensity_max: int, factor: float, gamma: float, color: float) -> int:
-    """_summary_
-
+    """Normalize a color intensity value with gamma correction.
+    
     Args:
-        intensity_max (_type_): _description_
-        factor (_type_): _description_
-        gamma (_type_): _description_
-        color (_type_): _description_
-
+        intensity_max (int): Maximum intensity value
+        factor (float): Intensity factor
+        gamma (float): Gamma correction value
+        color (float): Color value to normalize
+        
     Returns:
-        _type_: _description_
+        int: Normalized color value
     """
     color = abs(color)
-
     color = round(intensity_max * pow(color * factor, gamma))
-
-    color = min(255, color)
-    color = max(0, color)
-
-    return color
+    return normalize_color_value(color, 0, 255)
 
 
-def rgb_to_hexa(red: int, green: int, blue: int) -> str:
-    """_summary_
-
+def wavel_to_rgb(wavelength: float, degree: float) -> str:
+    """Convert wavelength to RGB color representation.
+    
+    Maps light wavelength to corresponding RGB color with intensity 
+    adjustments based on human color perception.
+    
     Args:
-        red (_type_): _description_
-        green (_type_): _description_
-        blue (_type_): _description_
-
+        wavelength (float): Light wavelength in nanometers
+        degree (float): Temperature in degrees Celsius
+        
     Returns:
-        _type_: _description_
-    """
-    red = format(red, 'x')
-    green = format(green, 'x')
-    blue = format(blue, 'x')
-
-    color_list = [red, green, blue]
-
-    for x in range(len(color_list)):
-        if len(color_list[x]) < 2:
-            color_list[x] = "0" + color_list[x]
-
-    hexa_rgb = ""
-    for x in color_list:
-        hexa_rgb = hexa_rgb + x
-
-    return hexa_rgb
-
-
-def wavel_to_rgb(wavelength: float, degree: float) -> str:  # NOSONAR
-    """_summary_
-
-    Args:
-        wavelength (_type_): _description_
-        degree (_type_): _description_
-
-    Returns:
-        _type_: _description_
+        str: Hexadecimal RGB color string
     """
     gamma = 0.80
     intensity_max = 255
@@ -161,14 +133,15 @@ def wavel_to_rgb(wavelength: float, degree: float) -> str:  # NOSONAR
 
 
 def set_led_color(devices, index, wc_liquid_temp: float):
-    """_summary_
-
+    """Set LED colors based on water cooling liquid temperature.
+    
     Args:
-        watercoolers (_type_): _description_
-        wc_liquid_temp (_type_): _description_
-
+        devices (list): List of watercooler devices
+        index (int): Index of the device to set color for
+        wc_liquid_temp (float): Liquid temperature in degrees Celsius
+        
     Returns:
-        _type_: _description_
+        list: RGB color values as [r, g, b]
     """
     array_color = [0, 0, 0]
     if len(devices) > 0:
@@ -184,40 +157,16 @@ def set_led_color(devices, index, wc_liquid_temp: float):
     return array_color
 
 
-def rgb_to_hsv(array_rgb: list) -> list:
-    # input
-    (r, g, b) = (array_rgb[0], array_rgb[1], array_rgb[2])
-    # normalize
-    (r, g, b) = (r / 255, g / 255, b / 255)
-    # convert to hsv
-    (h, s, v) = colorsys.rgb_to_hsv(r, g, b)
-    # expand HSV range
-    (h, s, v) = (int(h * 360), int(s * 100), int(v * 100))
-    return [h, s, v]
-
-
-def hsv_to_rgb(array_hsv: list) -> list:
-    # input
-    (h, s, v) = (array_hsv[0], array_hsv[1], array_hsv[2])
-    # normalize
-    (h, s, v) = (h / 360, s / 100, v / 100)
-    # convert to rgb
-    (r, g, b) = colorsys.hsv_to_rgb(h, s, v)
-    # expand RGB range
-    (r, g, b) = (int(r * 255), int(g * 255), int(b * 255))
-    return [r, g, b]
-
-
-def shift_hue(array_hsv: list, shift: int) -> list:
-    # position 0 is hue
-    new_hue = array_hsv[0] - shift
-    if new_hue < 0:
-        new_hue = 360 - new_hue
-    array_hsv[0] = new_hue
-    return array_hsv
-
-
 def increase_light(array_hsv: list, light: int) -> list:
+    """Increase the light/value component in an HSV color.
+    
+    Args:
+        array_hsv (list): HSV values as a list [h, s, v]
+        light (int): Amount to increase light by
+        
+    Returns:
+        list: Updated HSV values
+    """
     # position 2 is light
     new_light = array_hsv[2] + light
     array_hsv[2] = normalize_integer(new_light, 0, 100)
@@ -225,17 +174,36 @@ def increase_light(array_hsv: list, light: int) -> list:
 
 
 def normalize_integer(color: int, minimum: int, maximum: int) -> int:
+    """Normalize an integer value to be within a specific range.
+    
+    Args:
+        color (int): Value to normalize
+        minimum (int): Minimum allowed value
+        maximum (int): Maximum allowed value
+        
+    Returns:
+        int: Normalized value
+    """
     color = abs(color)
-
     color = round(color)
-
     color = min(maximum, color)
     color = max(minimum, color)
-
     return color
 
 
-def aorus_x470_hue_fix(array_rgb: list) -> list:  # NOSONAR
+def aorus_x470_hue_fix(array_rgb: list) -> list:
+    """Apply specific color corrections for the AORUS X470 motherboard.
+    
+    The AORUS X470 motherboard has issues with certain colors, particularly
+    in the blue spectrum. This function provides corrected RGB values based on
+    the hue to achieve more accurate display colors.
+    
+    Args:
+        array_rgb (list): RGB values as [r, g, b]
+        
+    Returns:
+        list: Corrected RGB values for the AORUS X470 motherboard
+    """
     # Correct AORUS motherboard blue led defect
     array_hsv = rgb_to_hsv(array_rgb)
     if (array_hsv[0] > 295) and (array_hsv[0] <= 360):
