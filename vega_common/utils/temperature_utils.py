@@ -43,28 +43,28 @@ def estimate_cpu_from_liquid_temp(liquid_temp: float, offset: float = 15.0, scal
         liquid_temp (float): Liquid cooling temperature in Celsius
         offset (float, optional): Base temperature difference. Defaults to 15.0.
         scaling_factor (float, optional): Scaling factor for higher temperatures. Defaults to 1.4.
+        mode (int, optional): Formula mode selection (0 for scaled offset, 1 for empirical formula). Defaults to 1.
         
     Returns:
         float: Estimated CPU temperature in Celsius
     """
     # For higher liquid temps, the difference between CPU and liquid increases
     if mode == 0:
-      if liquid_temp < 30:
-          return liquid_temp + offset
-      elif liquid_temp < 40:
-          return liquid_temp + (offset * 1.2)
-      else:
-          return liquid_temp + (offset * scaling_factor)
-    elif mode == 1:
-      return (-727.5 + (30 * liquid_temp)) / 7.5
-    
-
+        if liquid_temp < 30:
+            return liquid_temp + offset
+        elif liquid_temp < 40:
+            return liquid_temp + (offset * 1.2)
+        else:
+            return liquid_temp + (offset * scaling_factor)
+    else:
+        # Empirical formula derived from observed data
+        return (-727.5 + (30 * liquid_temp)) / 7.5
 
 
 def calculate_safe_fan_speed(temp: float, min_temp: float = 30.0, max_temp: float = 75.0, 
                              min_speed: int = 20, max_speed: int = 100) -> int:
     """
-    Calculate fan speed based on temperature.
+    Calculate fan speed based on temperature using linear interpolation.
     
     Args:
         temp (float): Current temperature in Celsius
@@ -121,19 +121,18 @@ def gpu_temp_to_fan_speed(temp: float, modifier: float = 0.0) -> int:
 
 def cpu_temp_to_fan_speed(temp: float) -> int:
     """
-    Convert CPU temperature to watercooler fan speed percentage.
+    Convert CPU temperature to fan speed percentage using a custom formula.
     
-    This function is specifically designed for CPU watercooling systems 
-    and uses a custom formula optimized for liquid cooling radiators.
+    This function is specifically designed for CPU cooling fans with a
+    response curve that increases rapidly at higher temperatures.
     
     Args:
-        temp (float): CPU or liquid temperature in Celsius
-        
+        temp (float): CPU temperature in Celsius
+    
     Returns:
         int: Fan speed percentage (0-100)
     """
-    # Calculate speed using custom formula for CPU cooling
-    # This formula provides a steeper curve than the GPU formula
+    # Calculate speed using custom formula for CPU
     speed = round((6 * temp) - 200)
     
     # Ensure speed is within valid range

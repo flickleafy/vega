@@ -47,7 +47,8 @@ def watercooler_thread(_):
                 cpu_temp = cpuStatus.get_cpu_status()
 
                 if cpu_temp == 0:
-                    cpu_temp = estimate_from_wc_temp(wc_temp)
+                    # Use common temperature utility instead
+                    cpu_temp = estimate_cpu_from_liquid_temp(wc_temp)
 
                 if wc_last_temps == 0:
                     wc_last_temps = [wc_temp] * 7
@@ -96,16 +97,3 @@ def watercooler_thread(_):
         raise SystemExit(
             'no devices matches available drivers and selection criteria')
     return None
-
-
-def estimate_from_wc_temp(wc_temp):
-    """
-    Estimate CPU temperature based on liquid cooling temperature.
-    
-    Args:
-        wc_temp (float): Water cooler liquid temperature in Celsius
-    
-    Returns:
-        float: Estimated CPU temperature
-    """
-    return estimate_cpu_from_liquid_temp(wc_temp)
