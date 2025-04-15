@@ -1,5 +1,8 @@
 from liquidctl.util import color_from_str
-from vega_common.utils.color_utils import rgb_to_hsv, hsv_to_rgb, rgb_to_hex as rgb_to_hexa, normalize_color_value
+from vega_common.utils.color_utils import (
+    rgb_to_hsv, hsv_to_rgb, rgb_to_hex as rgb_to_hexa, normalize_color_value,
+    shift_hue, adjust_brightness, hex_to_rgb
+)
 
 degree_min = 30.0
 degree_max = 46.0
@@ -167,10 +170,8 @@ def increase_light(array_hsv: list, light: int) -> list:
     Returns:
         list: Updated HSV values
     """
-    # position 2 is light
-    new_light = array_hsv[2] + light
-    array_hsv[2] = normalize_integer(new_light, 0, 100)
-    return array_hsv
+    # Use adjust_brightness from common utilities instead of manual adjustment
+    return adjust_brightness(array_hsv.copy(), light)
 
 
 def normalize_integer(color: int, minimum: int, maximum: int) -> int:
@@ -184,11 +185,8 @@ def normalize_integer(color: int, minimum: int, maximum: int) -> int:
     Returns:
         int: Normalized value
     """
-    color = abs(color)
-    color = round(color)
-    color = min(maximum, color)
-    color = max(minimum, color)
-    return color
+    # Use normalize_color_value from common utilities
+    return normalize_color_value(color, minimum, maximum)
 
 
 def aorus_x470_hue_fix(array_rgb: list) -> list:
@@ -205,7 +203,7 @@ def aorus_x470_hue_fix(array_rgb: list) -> list:
         list: Corrected RGB values for the AORUS X470 motherboard
     """
     # Correct AORUS motherboard blue led defect
-    array_hsv = rgb_to_hsv(array_rgb)
+    array_hsv = rgb_to_hsv(array_rgb.copy())
     if (array_hsv[0] > 295) and (array_hsv[0] <= 360):
         return [7, 1, 255]
     elif (array_hsv[0] > 290) and (array_hsv[0] <= 295):

@@ -59,12 +59,15 @@ def shift_hue(array_hsv: List[int], shift: int) -> List[int]:
     Returns:
         List[int]: HSV values with shifted hue as a list [h, s, v]
     """
+    # Create a copy to avoid modifying the original
+    result = array_hsv.copy()
+    
     # position 0 is hue
-    new_hue = array_hsv[0] - shift
+    new_hue = result[0] - shift
     if new_hue < 0:
         new_hue = 360 - abs(new_hue)
-    array_hsv[0] = new_hue % 360
-    return array_hsv
+    result[0] = new_hue % 360
+    return result
 
 
 def adjust_brightness(array_hsv: List[int], adjustment: int) -> List[int]:
@@ -78,10 +81,13 @@ def adjust_brightness(array_hsv: List[int], adjustment: int) -> List[int]:
     Returns:
         List[int]: HSV values with adjusted brightness as a list [h, s, v]
     """
+    # Create a copy to avoid modifying the original
+    result = array_hsv.copy()
+    
     # position 2 is value (brightness)
-    new_value = array_hsv[2] + adjustment
-    array_hsv[2] = max(0, min(100, new_value))
-    return array_hsv
+    new_value = result[2] + adjustment
+    result[2] = max(0, min(100, new_value))
+    return result
 
 
 def rgb_to_hex(red: int, green: int, blue: int) -> str:
@@ -109,11 +115,16 @@ def hex_to_rgb(hex_color: str) -> List[int]:
     
     Args:
         hex_color (str): Hexadecimal color string (with or without # prefix)
+                         Can be in the format "RRGGBB" or "RGB" (shorthand)
         
     Returns:
         List[int]: RGB values as a list [r, g, b]
     """
     hex_color = hex_color.lstrip('#')
+    
+    # Handle 3-digit hex codes (shorthand notation)
+    if len(hex_color) == 3:
+        hex_color = ''.join([c*2 for c in hex_color])  # Convert "RGB" to "RRGGBB"
     
     return [
         int(hex_color[0:2], 16),

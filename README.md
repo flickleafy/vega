@@ -114,10 +114,12 @@ vega_common/
 ├── setup.py           # Installation configuration
 └── utils/             # Utility modules
     ├── __init__.py
-    ├── datetime_utils.py    # Date and time handling functions
+    ├── color_utils.py        # Color manipulation and conversion functions
+    ├── datetime_utils.py     # Date and time handling functions
     ├── files_manipulation.py # File I/O with enhanced error handling
-    ├── list_process.py      # List manipulation utilities
-    └── sub_process.py       # Shell command execution utilities
+    ├── list_process.py       # List manipulation utilities
+    ├── sub_process.py        # Shell command execution utilities
+    └── temperature_utils.py  # Temperature conversion and calculation functions
 ```
 
 #### Library Installation
@@ -139,12 +141,14 @@ You can use the shared library in two ways:
    from vega_common.utils.files_manipulation import read_file, write_file
    from vega_common.utils.list_process import list_average
    from vega_common.utils.datetime_utils import get_current_time
+   from vega_common.utils.color_utils import rgb_to_hsv, hex_to_rgb
+   from vega_common.utils.temperature_utils import celsius_to_fahrenheit
    ```
 
 2. **Use shortcuts from the root package**:
 
    ```python
-   from vega_common import read_file, list_average, get_current_time
+   from vega_common import read_file, list_average, get_current_time, rgb_to_hsv, celsius_to_fahrenheit
    ```
 
 #### Key Features
@@ -153,6 +157,57 @@ You can use the shared library in two ways:
 - **Type Hints**: Full Python type annotations for better IDE integration and type checking
 - **Documentation**: Comprehensive docstrings for all functions and modules
 - **Consistent API**: Uniform interface design across all utility modules
+- **Color Manipulation**: Standardized functions for color format conversion and manipulation
+- **Temperature Processing**: Unified temperature conversion and fan speed calculation utilities
+
+#### Utility Modules Highlights
+
+##### Color Utilities
+```python
+# Convert between color formats (RGB, HSV, HEX)
+rgb_color = [255, 0, 0]  # Red
+hsv_color = rgb_to_hsv(rgb_color)  # [0, 100, 100]
+hex_color = rgb_to_hex(255, 0, 0)  # "#ff0000"
+
+# Color manipulation
+shifted_color = shift_hue(hsv_color.copy(), 120)  # Shift hue by 120 degrees
+brighter_color = adjust_brightness(hsv_color.copy(), 10)  # Increase brightness
+```
+
+##### Temperature Utilities
+```python
+# Temperature conversion
+fahrenheit = celsius_to_fahrenheit(30)  # 86.0
+
+# Fan speed calculations based on temperature
+fan_speed = calculate_safe_fan_speed(
+    current_temp=70,  # CPU temperature in Celsius
+    min_temp=40,      # Minimum temperature threshold 
+    max_temp=85,      # Maximum temperature threshold
+    min_speed=30,     # Minimum fan speed percentage
+    max_speed=100     # Maximum fan speed percentage
+)  # Returns appropriate fan speed percentage
+```
+
+#### Compatibility Layers
+
+To maintain backward compatibility during the migration to vega_common, compatibility layers have been created in both rootspace and userspace components:
+
+```
+vega_server/rootspace/utils/
+├── colorUtils.py         # Re-exports color functions from vega_common
+├── listProcess.py        # Re-exports list functions from vega_common
+├── temperatureUtils.py   # Re-exports temperature functions from vega_common
+└── ...
+
+vega_server/userspace/utils/
+├── colorUtils.py         # Re-exports color functions from vega_common
+├── listProcess.py        # Re-exports list functions from vega_common
+├── temperatureUtils.py   # Re-exports temperature functions from vega_common
+└── ...
+```
+
+These compatibility layers allow existing code to continue functioning while components are gradually migrated to use the common utilities directly.
 
 #### Migration from Legacy Utilities
 
