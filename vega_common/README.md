@@ -42,7 +42,7 @@ The library includes a comprehensive test suite using pytest to ensure all funct
 
 ### Test Directory Structure
 
-```
+```plaintext
 tests/
 ├── conftest.py                          # Global pytest configuration
 └── vega_common/

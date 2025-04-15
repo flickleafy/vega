@@ -8,6 +8,19 @@ It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis for the
 It uses [openRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) for ligthing controlling for RAM, Motherboard, and couple other devices supported by openRGB.\
 It uses [nvidia-settings](_)/[nvidia-ml-py](https://pypi.org/project/nvidia-ml-py/) to controll gpu temperature and fans, and in the future, it is planned to controll other GPU parameters.
 
+### Installing Dependencies
+
+The project dependencies are managed through a requirements.txt file. To install all required packages:
+
+```bash
+# Activate your virtual environment first (if using one)
+pip install -r requirements.txt
+pip install -e ./vega_common
+```
+
+More details for venvs in the "Virtual environment" section
+This will install all runtime dependencies as well as development tools needed for testing and code quality checks.
+
 ## Features
 
 1. Dynamic control lighting gradually using math formula (first assign a degree to a wavelength, convert wavelength to RGB, and then RGB to Hexadecimal RGB).
@@ -69,10 +82,23 @@ From root of the project:
 
 ### Virtual environment
 
-> sudo apt install python3.10-venv
-> python -m venv vega_env
-> source vega_env/bin/activate
-> ./build_modules.sh
+```bash
+# Install Python venv package
+sudo apt install python3.10-venv
+
+# Create virtual environment
+python -m venv vega_env
+
+# Activate virtual environment
+source vega_env/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+pip install -e ./vega_common
+
+# Build modules
+./build_modules.sh
+```
 
 ### Shared Library (vega_common)
 
@@ -137,3 +163,63 @@ When migrating existing code to use vega_common:
 3. Replace imports like `from utils.datetime import get_current_time` with `from vega_common.utils.datetime_utils import get_current_time`
 
 A migration script is available to automatically update imports across the codebase (see `tools/update_imports.py`).
+
+### Automated Testing
+
+The project uses pytest as the testing framework with additional tools for code coverage and quality assurance.
+
+#### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run tests with verbose output
+pytest -v
+
+# Run tests for a specific module
+pytest tests/vega_common/utils/test_datetime_utils.py
+
+# Run tests with coverage analysis
+pytest --cov=vega_common --cov-report=term-missing
+```
+
+#### Automated Test Scripts
+
+For convenience, several test automation scripts are available:
+
+```bash
+# Run basic test suite
+./scripts/run_tests.sh
+
+# Run tests with coverage analysis
+./scripts/run_coverage.sh
+
+# Run code quality checks (flake8, mypy)
+./scripts/run_quality_checks.sh
+```
+
+#### Code Quality Checks
+
+To run code quality checks manually:
+
+```bash
+# Run static type checking
+mypy vega_common vega_server vega_client
+
+# Run style and error checks
+flake8 vega_common vega_server vega_client
+```
+
+### Continuous Integration
+
+The project uses GitHub Actions for continuous integration. Every commit triggers the following automated checks:
+
+1. **Unit Tests**: All test cases are run to ensure functionality
+2. **Code Coverage**: Coverage reports are generated to track test coverage
+3. **Type Checking**: Static type analysis with mypy
+4. **Code Quality**: Style and error checking with flake8
+
+The CI configuration can be found in `.github/workflows/ci.yml` file.
+
+When contributing to the project, make sure all CI checks pass before submitting pull requests.
