@@ -14,6 +14,7 @@ Available modules:
 - sub_process: Shell command execution with various security and error handling options
 - color_utils: Color conversion and manipulation functions
 - temperature_utils: Temperature conversion and calculation utilities
+- sliding_window: Advanced sliding window implementation for time-series data
 
 Usage:
     # Import specific utilities
@@ -23,9 +24,10 @@ Usage:
     from vega_common.utils.datetime_utils import get_current_time
     from vega_common.utils.color_utils import rgb_to_hsv, hsv_to_rgb
     from vega_common.utils.temperature_utils import estimate_cpu_from_liquid_temp
+    from vega_common.utils.sliding_window import SlidingWindow
     
     # Or use shortcuts from the root package
-    from vega_common import read_file, list_average, get_current_time, rgb_to_hsv
+    from vega_common import read_file, list_average, get_current_time, rgb_to_hsv, SlidingWindow
 """
 
 # Import common utilities for easier access
@@ -41,6 +43,8 @@ from vega_common.utils.temperature_utils import (
     celsius_to_fahrenheit, fahrenheit_to_celsius,
     estimate_cpu_from_liquid_temp, calculate_safe_fan_speed
 )
+# Import the new SlidingWindow class
+from vega_common.utils.sliding_window import SlidingWindow
 
 __version__ = '0.1.0'
 __author__ = 'Vega Team'

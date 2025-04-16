@@ -87,5 +87,8 @@ def create_sliding_window(size: int, initial_value: T = 0) -> List[T]:
         
     Returns:
         List[T]: A new list of the specified size filled with the initial value.
+        If size is zero or negative, returns an empty list.
     """
+    if size <= 0:
+        return []
     return [initial_value] * size
