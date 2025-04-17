@@ -9,11 +9,11 @@ import time
 from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 
-from vega_common.utils.device_monitoring import (
-    DeviceStatus,
-    DeviceMonitor,
-    DeviceController,
-    DeviceManager
+from vega_common.utils.device_controller import DeviceController
+from vega_common.utils.device_manager import DeviceManager
+from vega_common.utils.device_status import DeviceStatus
+from vega_common.utils.device_monitor import (
+    DeviceMonitor
 )
 
 
