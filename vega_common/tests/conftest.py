@@ -11,6 +11,27 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
+def pytest_addoption(parser):
+    """Add custom command line options to pytest."""
+    parser.addoption(
+        "--runperf",
+        action="store_true",
+        default=False,
+        help="Run performance tests that are skipped by default"
+    )
+
+
+@pytest.fixture
+def run_performance_tests(request):
+    """
+    Fixture to determine if performance tests should run.
+    
+    Returns:
+        bool: True if performance tests should run, False otherwise.
+    """
+    return request.config.getoption("--runperf")
+
+
 @pytest.fixture
 def sample_rgb_colors():
     """
