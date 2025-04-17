@@ -6,8 +6,9 @@ import lighting.lightingStatus as lightingStatus
 from openrgb.utils import RGBColor
 from openrgb.utils import DeviceType
 
-from lighting.lightingColor import aorus_x470_hue_fix
+from vega_common.utils.hardware_rgb_profiles import aorus_x470_hue_fix
 from vega_common.utils.color_utils import calculate_color_signature
+from vega_common.utils.color_utils import rgb_to_rgbcolor
 
 
 def lighting_thread(_):
@@ -42,25 +43,6 @@ def lighting_thread(_):
             print("Trying to reconnect...")
             lightingStatus.init_lighting()
     return None
-
-
-def rgb_to_rgbcolor(rgb_array: list) -> RGBColor:
-    """Convert a standard RGB array to an OpenRGB RGBColor object.
-    
-    Args:
-        rgb_array (list): RGB values as [r, g, b]
-        
-    Returns:
-        RGBColor: OpenRGB color object
-    """
-    if not rgb_array or len(rgb_array) < 3:
-        return RGBColor(0, 0, 0)
-        
-    r = rgb_array[0]
-    g = rgb_array[1]
-    b = rgb_array[2]
-    return RGBColor(r, g, b)
-
 
 def set_device_color(device, array_color):
     """Set the color for an RGB device with appropriate handling for device types.
@@ -112,18 +94,3 @@ def color_not_changed(array_color):
         
     globals.COLOR_SIG_LAST = color_signature_current
     return True
-
-
-def set_aorus_color(device, array_color):
-    """Set color for AORUS motherboards with special color correction.
-    
-    This is a legacy function maintained for backward compatibility.
-    New code should use set_device_color instead.
-    
-    Args:
-        device: The OpenRGB device object to control
-        array_color (list): RGB values as [r, g, b]
-    """
-    new_array_color = aorus_x470_hue_fix(array_color)
-    rgb_color = rgb_to_rgbcolor(new_array_color)
-    device.set_color(rgb_color)

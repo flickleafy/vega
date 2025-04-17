@@ -3,6 +3,7 @@ from vega_common.utils.color_utils import (
     rgb_to_hsv, hsv_to_rgb, rgb_to_hex as rgb_to_hexa, normalize_color_value,
     shift_hue, adjust_brightness, hex_to_rgb
 )
+from vega_common.utils.hardware_rgb_profiles import aorus_x470_hue_fix
 
 degree_min = 30.0
 degree_max = 46.0
@@ -188,83 +189,5 @@ def normalize_integer(color: int, minimum: int, maximum: int) -> int:
     # Use normalize_color_value from common utilities
     return normalize_color_value(color, minimum, maximum)
 
-
-def aorus_x470_hue_fix(array_rgb: list) -> list:
-    """Apply specific color corrections for the AORUS X470 motherboard.
-    
-    The AORUS X470 motherboard has issues with certain colors, particularly
-    in the blue spectrum. This function provides corrected RGB values based on
-    the hue to achieve more accurate display colors.
-    
-    Args:
-        array_rgb (list): RGB values as [r, g, b]
-        
-    Returns:
-        list: Corrected RGB values for the AORUS X470 motherboard
-    """
-    # Correct AORUS motherboard blue led defect
-    array_hsv = rgb_to_hsv(array_rgb.copy())
-    if (array_hsv[0] > 295) and (array_hsv[0] <= 360):
-        return [7, 1, 255]
-    elif (array_hsv[0] > 290) and (array_hsv[0] <= 295):
-        return [5, 1, 255]
-    elif (array_hsv[0] > 280) and (array_hsv[0] <= 290):
-        return [4, 0, 255]
-    elif (array_hsv[0] > 270) and (array_hsv[0] <= 280):
-        return [3, 1, 255]
-    elif (array_hsv[0] > 260) and (array_hsv[0] <= 270):
-        return [3, 0, 255]
-    elif (array_hsv[0] > 250) and (array_hsv[0] <= 260):
-        return [2, 0, 255]
-    elif (array_hsv[0] > 240) and (array_hsv[0] <= 250):
-        return [1, 1, 255]
-    elif (array_hsv[0] > 230) and (array_hsv[0] <= 240):
-        return [0, 1, 255]
-    elif (array_hsv[0] > 220) and (array_hsv[0] <= 230):
-        return [0, 2, 255]
-    elif (array_hsv[0] > 210) and (array_hsv[0] <= 220):
-        return [0, 4, 255]
-    elif (array_hsv[0] > 200) and (array_hsv[0] <= 210):
-        return [0, 8, 255]
-    elif (array_hsv[0] > 190) and (array_hsv[0] <= 200):
-        return [0, 16, 255]
-    elif (array_hsv[0] > 180) and (array_hsv[0] <= 190):
-        return [0, 28, 255]
-    elif (array_hsv[0] > 170) and (array_hsv[0] <= 180):
-        return [0, 36, 255]
-    elif (array_hsv[0] > 160) and (array_hsv[0] <= 170):
-        return [0, 40, 255]
-    elif (array_hsv[0] > 150) and (array_hsv[0] <= 160):
-        return [0, 44, 255]
-    elif (array_hsv[0] > 140) and (array_hsv[0] <= 150):
-        return [0, 48, 255]
-    elif (array_hsv[0] > 130) and (array_hsv[0] <= 140):
-        return [0, 52, 255]
-    elif (array_hsv[0] > 120) and (array_hsv[0] <= 130):
-        return [0, 80, 255]
-    elif (array_hsv[0] > 110) and (array_hsv[0] <= 120):
-        return [10, 200, 255]
-    elif (array_hsv[0] > 100) and (array_hsv[0] <= 110):
-        return [28, 255, 255]
-    elif (array_hsv[0] > 90) and (array_hsv[0] <= 100):
-        return [38, 255, 255]
-    elif (array_hsv[0] > 80) and (array_hsv[0] <= 90):
-        return [48, 255, 255]
-    elif (array_hsv[0] > 70) and (array_hsv[0] <= 80):
-        return [68, 255, 255]
-    elif (array_hsv[0] > 60) and (array_hsv[0] <= 70):
-        return [40, 120, 255]
-    elif (array_hsv[0] > 50) and (array_hsv[0] <= 60):
-        return [40, 110, 255]
-    elif (array_hsv[0] > 40) and (array_hsv[0] <= 50):
-        return [50, 110, 255]
-    elif (array_hsv[0] > 30) and (array_hsv[0] <= 40):
-        return [65, 110, 255]
-    elif (array_hsv[0] > 20) and (array_hsv[0] <= 30):
-        return [100, 90, 255]
-    elif (array_hsv[0] > 10) and (array_hsv[0] <= 20):
-        return [110, 70, 255]
-    elif (array_hsv[0] > 5) and (array_hsv[0] <= 10):
-        return [140, 50, 255]
-    elif (array_hsv[0] >= 0) and (array_hsv[0] <= 5):
-        return [255, 20, 255]
+# The aorus_x470_hue_fix function has been moved to vega_common.utils.hardware_rgb_profiles
+# Use the imported function instead

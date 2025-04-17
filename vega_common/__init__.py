@@ -37,11 +37,14 @@ from vega_common.utils.sub_process import run_cmd, run_cmd_with_status, run_cmd_
 from vega_common.utils.datetime_utils import get_current_time, get_timestamp, format_duration, is_older_than
 from vega_common.utils.color_utils import (
     rgb_to_hsv, hsv_to_rgb, rgb_to_hex, hex_to_rgb,
-    shift_hue, adjust_brightness, normalize_color_value
+    shift_hue, adjust_brightness, normalize_color_value,
+    normalize_rgb_values, colors_are_similar, calculate_color_signature,
+    calculate_color_distance, rgb_to_rgbcolor, handle_extreme_hsv
 )
 from vega_common.utils.temperature_utils import (
     celsius_to_fahrenheit, fahrenheit_to_celsius,
-    estimate_cpu_from_liquid_temp, calculate_safe_fan_speed
+    estimate_cpu_from_liquid_temp, calculate_safe_fan_speed,
+    cpu_temp_to_fan_speed, gpu_temp_to_fan_speed
 )
 # Import the new SlidingWindow class
 from vega_common.utils.sliding_window import SlidingWindow
