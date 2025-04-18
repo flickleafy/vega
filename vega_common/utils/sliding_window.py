@@ -8,6 +8,7 @@ require historical context.
 from typing import List, Union, TypeVar, Generic, Callable, Optional, Any
 import statistics
 from collections import deque
+import itertools  # Import itertools
 
 T = TypeVar('T')  # Generic type for window elements
 
@@ -160,6 +161,21 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
     needed when tracking temperature, load, or other numeric time-series data.
     """
     
+    def fill(self, value: Union[int, float]) -> None:
+        """
+        Fill the window with the given value if it is currently empty.
+        
+        This method efficiently populates the entire window capacity with the
+        specified value, but only if the window contains no elements.
+        If the window is not empty, this method does nothing.
+        
+        Args:
+            value (Union[int, float]): The numeric value to fill the window with.
+        """
+        # O(C) where C is the capacity, but potentially faster than N appends
+        if self.is_empty():
+            self.window.extend(itertools.repeat(value, self.capacity))
+
     def get_average(self) -> float:
         """
         Calculate the average of all values in the window.

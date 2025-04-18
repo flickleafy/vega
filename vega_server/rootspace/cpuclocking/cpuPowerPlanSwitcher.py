@@ -1,7 +1,7 @@
 from cpuclocking.detectBalance import detect_balance_apps
 from cpuclocking.detectPerformance import detect_performance_apps
 import globals
-from utils.processList import get_process_list
+from vega_common.utils.process_utils import get_process_list
 
 
 def powerplan_switcher():

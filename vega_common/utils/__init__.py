@@ -34,3 +34,9 @@ from vega_common.utils.sliding_window import (
     SlidingWindow,
     NumericSlidingWindow
 )
+
+# Re-export process utilities
+from vega_common.utils.process_utils import (
+    get_process_list,
+    similar_string_list
+)
