@@ -27,10 +27,10 @@ Temperature-related functionality appears in multiple places:
   - [x] `temperature_within_range()`
   - [x] `classify_temperature()`
 - [x] Temperature utilities have comprehensive test coverage
-- [ ] These should all be standardized in `vega_common.utils.temperature_utils` (Migration task for legacy code).
-- [ ] Add unified fan speed control algorithms
+- [~] These should all be standardized in `vega_common.utils.temperature_utils` (Migration task for legacy code - `gpuThread.py` migrated).
+- [~] Add unified fan speed control algorithms (`gpu_temp_to_fan_speed` implemented and used).
 - [ ] Create standard temperature range mapping functions
-- [ ] Implement robust temperature averaging with configurable window sizes
+- [~] Implement robust temperature averaging with configurable window sizes (`NumericSlidingWindow` implemented and used in `gpuThread.py`).
 
 ## 3. Color Management and RGB Lighting
 
@@ -45,7 +45,7 @@ The project has already made progress centralizing color utilities, but we can g
 - [x] Hardware-specific RGB profiles are implemented in the shared library (`hardware_rgb_profiles.py`)
   - [x] The lightingColor.py module contains specialized RGB color transformations like `aorus_x470_hue_fix()` that have been moved to the shared library
 - [ ] RGB-to-HSV-to-RGB conversion chains are duplicated (Migration task for legacy code).
-- [ ] Add specialized hardware RGB profiles like the `aorus_x470_hue_fix` function
+- [x] Add specialized hardware RGB profiles like the `aorus_x470_hue_fix` function (Marking done as the example was moved).
 - [ ] Create color gradient generation for temperature visualization
 - [ ] Add support for different RGB hardware interfaces
 
@@ -76,14 +76,14 @@ The device monitoring code (GPU, CPU, watercooler) contains similar patterns:
   - [x] `DeviceManager` in `device_manager.py`
 - [ ] Complete the `DeviceDetection` system in `device_detection.py` to enumerate and identify hardware
 - [ ] Implement concrete device monitor classes for specific hardware:
-  - [ ] `NvidiaGpuMonitor` - For monitoring NVIDIA GPUs using NVML
+  - [x] `NvidiaGpuMonitor` - For monitoring NVIDIA GPUs using NVML (Implemented in `vega_common.utils.gpu_devices`)
   - [ ] `AmdGpuMonitor` - For monitoring AMD GPUs
   - [ ] `CpuMonitor` - For monitoring CPU temperature and usage
   - [ ] `WatercoolerMonitor` - For monitoring liquid cooling systems
   - [ ] `SystemMonitor` - For general system metrics
   - [ ] `MemoryMonitor` - For RAM usage tracking
 - [ ] Implement concrete device controller classes:
-  - [ ] `NvidiaGpuController` - For controlling NVIDIA GPU fan speeds and overclocking
+  - [x] `NvidiaGpuController` - For controlling NVIDIA GPU fan speeds and overclocking (Implemented in `vega_common.utils.gpu_devices`)
   - [ ] `AmdGpuController` - For controlling AMD GPU parameters
   - [ ] `WatercoolerController` - For pump and fan control
   - [ ] `RgbLightingController` - For controlling RGB lighting across devices
@@ -92,9 +92,9 @@ The device monitoring code (GPU, CPU, watercooler) contains similar patterns:
   - [ ] Add threshold-based alerts to `DeviceStatus`
   - [ ] Implement alert severity levels and notifications
 - [ ] Create unified hardware profiles that combine monitoring and control
-- [ ] Status retrieval functions follow common patterns (Migration task for legacy code).
-- [ ] Thread management for monitoring devices is duplicated across modules (Migration task for legacy code).
-- [ ] Data normalization and averaging techniques are repeated (Migration task for legacy code).
+- [~] Status retrieval functions follow common patterns (Migration task for legacy code - `gpuThread.py` migrated).
+- [~] Thread management for monitoring devices is duplicated across modules (Migration task for legacy code - `gpuThread.py` migrated).
+- [~] Data normalization and averaging techniques are repeated (Migration task for legacy code - `gpuThread.py` migrated).
 
 ## 6. Common Sliding Window Implementations
 
@@ -111,7 +111,7 @@ cpu_last_temps = listProcess.remove_first_add_last(
   - [x] `SlidingWindow` (Generic base class)
   - [x] `NumericSlidingWindow` (Specialized for numbers with stats methods: `get_average`, `get_median`, `get_max`, `get_min`, `get_sum`, `get_standard_deviation`, `get_moving_average`, `get_weighted_average`, `get_trend`)
 - [x] The shared library implements `create_sliding_window()` function
-- [ ] Legacy code should be updated to use these implementations (`NumericalSlidingWindow`)(Migration task for legacy code).
+- [~] Legacy code should be updated to use these implementations (`NumericalSlidingWindow`)(Migration task for legacy code - `gpuThread.py` migrated).
 
 ## 7. Command Execution and Subprocess Management
 
@@ -258,7 +258,7 @@ I recommend implementing concrete classes for:
 
 ## Specific Implementation: GPU Monitoring
 
-Let's start with a concrete implementation recommendation for the GPU monitoring capability:
+Let's start with a concrete implementation recommendation for the GPU monitoring capability: (Note: `NvidiaGpuMonitor` and `NvidiaGpuController` are now implemented in `vega_common.utils.gpu_devices.py`)
 
 ```python
 # Example of how a NvidiaGpuMonitor class could be structured

@@ -2,7 +2,7 @@ from vega_common.utils.device_controller import DeviceController
 from vega_common.utils.device_monitor import DeviceMonitor
 
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class DeviceManager:
