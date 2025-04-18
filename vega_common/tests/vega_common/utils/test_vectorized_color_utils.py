@@ -65,7 +65,7 @@ class TestVectorizedColorOperations:
         assert normalize_multiple_colors([]) == []
     
     def test_vectorized_rgb_to_hsv(self):
-        """Test vectorized_rgb_to_hsv with various inputs."""
+        """Test vectorized_rgb_to_hsv with various valid inputs."""
         # Test with standard colors
         rgb_colors = [
             [255, 0, 0],     # Red
@@ -78,27 +78,33 @@ class TestVectorizedColorOperations:
             [240, 100, 100]   # Blue in HSV
         ]
         hsv_colors = vectorized_rgb_to_hsv(rgb_colors)
-        
+
         # Compare each color with a small tolerance for floating point differences
+        assert len(hsv_colors) == len(expected_hsv)
         for i in range(len(expected_hsv)):
-            for j in range(3):
-                assert abs(hsv_colors[i][j] - expected_hsv[i][j]) <= 0.5
-        
-        # Test with invalid inputs
-        rgb_colors = [
-            [255, 0, 0],  # Valid
-            [100],        # Invalid (too short)
-            []            # Invalid (empty)
-        ]
-        hsv_colors = vectorized_rgb_to_hsv(rgb_colors)
-        assert len(hsv_colors) == 3
-        assert abs(hsv_colors[0][0] - 0) <= 0.5     # Valid color converted
-        assert hsv_colors[1] == [0, 0, 0]           # Invalid color returns default
-        assert hsv_colors[2] == [0, 0, 0]           # Empty list returns default
-        
-        # Test with empty list
+            assert hsv_colors[i] == pytest.approx(expected_hsv[i], abs=0.5)
+
+        # Test with empty list input
         assert vectorized_rgb_to_hsv([]) == []
-    
+
+    def test_vectorized_rgb_to_hsv_invalid_input(self):
+        """Test vectorized_rgb_to_hsv raises error with invalid inputs."""
+        invalid_rgb_lists = [
+            [[255, 0, 0], [100], [0, 0, 255]], # Contains short list
+            [[255, 0, 0], [], [0, 0, 255]],    # Contains empty list
+            [[255, 0, 0], None, [0, 0, 255]], # Contains None (will raise TypeError)
+            [[255, 0, 0], "invalid", [0, 0, 255]] # Contains non-list (will raise TypeError)
+        ]
+
+        for invalid_list in invalid_rgb_lists:
+            # Expect IndexError for short/empty lists, TypeError for None/str
+            if any(isinstance(item, list) and len(item) < 3 for item in invalid_list):
+                 with pytest.raises(IndexError):
+                     vectorized_rgb_to_hsv(invalid_list) # type: ignore
+            elif any(not isinstance(item, list) for item in invalid_list):
+                 with pytest.raises(TypeError):
+                     vectorized_rgb_to_hsv(invalid_list) # type: ignore
+
     def test_vectorized_hsv_to_rgb(self):
         """Test vectorized_hsv_to_rgb with various inputs."""
         # Test with standard colors

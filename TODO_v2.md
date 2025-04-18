@@ -9,8 +9,8 @@ I noticed that the project already has a good start with `vega_common.utils.list
   - [x] `list_average()`
   - [x] `safe_get()`
   - [x] `create_sliding_window()`
-- [ ] The wcThread.py file uses `listProcess.remove_first_add_last()` and `listProcess.list_average()` functions for temperature averaging, which are already in the shared library.
-- [ ] We should ensure all components are using the shared implementations consistently.
+- [x] The wcThread.py file uses `listProcess.remove_first_add_last()` and `listProcess.list_average()` functions for temperature averaging, which are already in the shared library. (Note: Verified `wcThread.py` uses `NumericSlidingWindow` instead, which is the correct shared implementation).
+- [~] We should ensure all components are using the shared implementations consistently. (`wcThread.py` is consistent).
 
 ## 2. Temperature Conversion and Management
 
@@ -29,7 +29,7 @@ Temperature-related functionality appears in multiple places:
 - [x] Temperature utilities have comprehensive test coverage
 - [~] These should all be standardized in `vega_common.utils.temperature_utils` (Migration task for legacy code - `gpuThread.py` migrated).
 - [~] Add unified fan speed control algorithms (`gpu_temp_to_fan_speed` implemented and used).
-- [ ] Create standard temperature range mapping functions
+- [x] Create standard temperature range mapping functions
 - [~] Implement robust temperature averaging with configurable window sizes (`NumericSlidingWindow` implemented and used in `gpuThread.py`).
 
 ## 3. Color Management and RGB Lighting
@@ -46,8 +46,8 @@ The project has already made progress centralizing color utilities, but we can g
   - [x] The lightingColor.py module contains specialized RGB color transformations like `aorus_x470_hue_fix()` that have been moved to the shared library
 - [ ] RGB-to-HSV-to-RGB conversion chains are duplicated (Migration task for legacy code).
 - [x] Add specialized hardware RGB profiles like the `aorus_x470_hue_fix` function (Marking done as the example was moved).
-- [ ] Create color gradient generation for temperature visualization
-- [ ] Add support for different RGB hardware interfaces
+- [x] Create color gradient generation for temperature visualization
+- [x] Add support for different RGB hardware interfaces
 
 ## 4. File Operations and Error Handling
 
