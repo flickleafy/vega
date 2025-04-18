@@ -31,7 +31,10 @@ Usage:
 """
 
 # Import common utilities for easier access
-from vega_common.utils.files_manipulation import read_file, write_file, safe_open, ensure_directory_exists
+from vega_common.utils.files_manipulation import (
+    read_file, write_file, safe_open, ensure_directory_exists,
+    read_json_file, write_json_file # Add new JSON functions
+)
 from vega_common.utils.list_process import list_average, remove_first_add_last, safe_get, create_sliding_window
 from vega_common.utils.sub_process import run_cmd, run_cmd_with_status, run_cmd_sudo
 from vega_common.utils.datetime_utils import get_current_time, get_timestamp, format_duration, is_older_than

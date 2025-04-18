@@ -1,12 +1,12 @@
 import gpucooler.nvidiaex.parseXconfig as parse_xconfig
 from globals import ERROR_MESSAGE
-import vega_common.utils.files_manipulation as files
+from vega_common.utils.files_manipulation import read_file, write_file
 
 
 def layout_has_multi_screens():
     has_multi_screens = False
     try:
-        xorg_conf_file = files.read_file('/etc/X11/xorg.conf')
+        xorg_conf_file = read_file('/etc/X11/xorg.conf')
         sections = parse_xconfig.parse_sections(xorg_conf_file)
         serverlayout_section = parse_xconfig.get_specific_section(
             xorg_conf_file, sections, 'ServerLayout')
@@ -45,4 +45,4 @@ def check_and_fix_layout_order(lines, section):
             changed = True
 
         if changed:
-            files.write_file('/etc/X11/xorg.conf', lines)
+            write_file('/etc/X11/xorg.conf', "".join(lines))

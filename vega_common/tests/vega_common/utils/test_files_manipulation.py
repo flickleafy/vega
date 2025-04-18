@@ -8,12 +8,15 @@ import os
 import shutil
 import tempfile
 import pytest
+import json
 from pathlib import Path
 from vega_common.utils.files_manipulation import (
     read_file,
     write_file,
     safe_open,
-    ensure_directory_exists
+    ensure_directory_exists,
+    read_json_file,
+    write_json_file
 )
 
 
@@ -227,3 +230,127 @@ class TestEnsureDirectoryExists(TestFileManipulation):
         
         # No new directories should be created in the current path
         assert not os.path.exists("just_filename")
+
+
+class TestReadJsonFile(TestFileManipulation):
+    """Tests for the read_json_file function."""
+    
+    @pytest.fixture(autouse=True)
+    def setup_json_files(self, setup_teardown):
+        """Set up JSON files for testing."""
+        self.valid_json_path = os.path.join(self.temp_dir, "valid.json")
+        self.valid_json_data = {"key": "value", "number": 123, "list": [1, 2, 3]}
+        with open(self.valid_json_path, 'w') as f:
+            json.dump(self.valid_json_data, f)
+            
+        self.invalid_json_path = os.path.join(self.temp_dir, "invalid.json")
+        with open(self.invalid_json_path, 'w') as f:
+            f.write("this is not json{")
+            
+        self.empty_json_path = os.path.join(self.temp_dir, "empty.json")
+        with open(self.empty_json_path, 'w') as f:
+            f.write("") # Empty file
+
+    def test_read_valid_json(self):
+        """Test reading a valid JSON file."""
+        data = read_json_file(self.valid_json_path)
+        assert data == self.valid_json_data
+        
+    def test_read_nonexistent_json(self):
+        """Test reading a nonexistent JSON file raises FileNotFoundError."""
+        nonexistent_path = os.path.join(self.temp_dir, "nonexistent.json")
+        with pytest.raises(FileNotFoundError):
+            read_json_file(nonexistent_path)
+            
+    def test_read_invalid_json(self):
+        """Test reading an invalid JSON file raises JSONDecodeError."""
+        with pytest.raises(json.JSONDecodeError):
+            read_json_file(self.invalid_json_path)
+            
+    def test_read_empty_file_json(self):
+        """Test reading an empty file raises JSONDecodeError."""
+        with pytest.raises(json.JSONDecodeError):
+            read_json_file(self.empty_json_path)
+            
+    def test_read_json_no_permission(self):
+        """Test reading JSON file without permission raises PermissionError."""
+        if os.name != "nt":
+            os.chmod(self.valid_json_path, 0o000)
+            try:
+                with pytest.raises(PermissionError):
+                    read_json_file(self.valid_json_path)
+            finally:
+                os.chmod(self.valid_json_path, 0o666)
+
+
+class TestWriteJsonFile(TestFileManipulation):
+    """Tests for the write_json_file function."""
+    
+    def test_write_valid_json(self):
+        """Test writing valid data to a JSON file."""
+        output_path = os.path.join(self.temp_dir, "output.json")
+        data_to_write = {"name": "test", "value": 42, "items": ["a", "b"]}
+        write_json_file(output_path, data_to_write)
+        
+        # Verify content
+        with open(output_path, 'r') as f:
+            read_data = json.load(f)
+        assert read_data == data_to_write
+        
+    def test_write_json_creates_directory(self):
+        """Test write_json_file creates parent directories if they don't exist."""
+        nested_output_path = os.path.join(self.nested_dir_path, "nested_output.json")
+        data_to_write = {"nested": True}
+        write_json_file(nested_output_path, data_to_write)
+        
+        assert os.path.exists(nested_output_path)
+        with open(nested_output_path, 'r') as f:
+            read_data = json.load(f)
+        assert read_data == data_to_write
+        
+    def test_write_json_overwrite(self):
+        """Test writing JSON overwrites an existing file."""
+        output_path = os.path.join(self.temp_dir, "overwrite.json")
+        initial_data = {"initial": True}
+        with open(output_path, 'w') as f:
+            json.dump(initial_data, f)
+            
+        new_data = {"overwritten": True}
+        write_json_file(output_path, new_data)
+        
+        with open(output_path, 'r') as f:
+            read_data = json.load(f)
+        assert read_data == new_data
+        
+    def test_write_json_no_indent(self):
+        """Test writing JSON with no indentation (compact)."""
+        output_path = os.path.join(self.temp_dir, "compact.json")
+        data_to_write = {"a": 1, "b": 2}
+        write_json_file(output_path, data_to_write, indent=None)
+        
+        with open(output_path, 'r') as f:
+            content = f.read()
+        # Expect compact JSON, no newlines or significant spaces
+        assert content == '{"a": 1, "b": 2}'
+        
+    def test_write_json_non_serializable(self):
+        """Test writing non-serializable data raises TypeError."""
+        output_path = os.path.join(self.temp_dir, "non_serializable.json")
+        non_serializable_data = {"set": {1, 2, 3}} # Sets are not JSON serializable by default
+        with pytest.raises(TypeError):
+            write_json_file(output_path, non_serializable_data)
+            
+    def test_write_json_no_permission(self):
+        """Test writing JSON file without permission raises PermissionError."""
+        if os.name != "nt":
+            read_only_dir = os.path.join(self.temp_dir, "read_only_json_dir")
+            os.makedirs(read_only_dir)
+            os.chmod(read_only_dir, 0o500) # r-x
+            output_path = os.path.join(read_only_dir, "cannot_write.json")
+            data_to_write = {"data": "test"}
+            
+            try:
+                with pytest.raises(PermissionError):
+                    write_json_file(output_path, data_to_write)
+            finally:
+                os.chmod(read_only_dir, 0o755)
