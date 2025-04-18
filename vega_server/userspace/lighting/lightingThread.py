@@ -51,6 +51,11 @@ def set_device_color(device, array_color):
         device: The OpenRGB device object to control
         array_color (list): RGB values as [r, g, b]
     """
+    # Check if the color has actually changed since the last update
+    # If not, return early to avoid unnecessary device updates
+    if not color_not_changed(array_color):
+        return
+    
     print("###")
     print("### Setting device: " +
           device.name + " color: " + str(array_color))

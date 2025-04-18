@@ -18,6 +18,7 @@ class DeviceStatus:
         status_properties (Dict[str, Any]): Dictionary of device status properties.
         last_update (datetime): Timestamp of the last status update.
         status_history (Dict[str, SlidingWindow]): History of numeric status values.
+        errors (Dict[str, str]): Dictionary of error messages by property name.
     """
 
     def __init__(self, device_id: str, device_type: str, history_size: int = 10):
@@ -35,6 +36,8 @@ class DeviceStatus:
         self.status_properties = {}
         self.last_update = datetime.now()
         self.status_history = {}
+        # Store error messages by property name
+        self.errors: Dict[str, str] = {}
 
     def update_property(self, property_name: str, value: Any) -> None:
         """
@@ -130,3 +133,47 @@ class DeviceStatus:
                 result[avg_key] = self.get_property_average(prop_name)
 
         return result
+
+    def set_error(self, property_name: str, error_message: str) -> None:
+        """
+        Set an error message for a property.
+
+        Args:
+            property_name (str): Name of the property with an error.
+            error_message (str): Error message to store.
+        """
+        self.errors[property_name] = error_message
+
+    def clear_error(self, property_name: str) -> None:
+        """
+        Clear an error message for a property if it exists.
+
+        Args:
+            property_name (str): Name of the property to clear error for.
+        """
+        if property_name in self.errors:
+            del self.errors[property_name]
+
+    def has_error(self, property_name: str) -> bool:
+        """
+        Check if a property has an error.
+
+        Args:
+            property_name (str): Name of the property to check.
+
+        Returns:
+            bool: True if the property has an error, False otherwise.
+        """
+        return property_name in self.errors
+
+    def get_error(self, property_name: str) -> Optional[str]:
+        """
+        Get the error message for a property.
+
+        Args:
+            property_name (str): Name of the property to get error for.
+
+        Returns:
+            Optional[str]: Error message if one exists, None otherwise.
+        """
+        return self.errors.get(property_name)
