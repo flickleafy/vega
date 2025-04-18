@@ -3,7 +3,6 @@ Color manipulation utilities for the Vega project.
 
 This module provides common color manipulation operations used across Vega sub-projects.
 """
-import colorsys
 import math
 from typing import List, Tuple, Union
 
@@ -11,103 +10,151 @@ RGBColor = Tuple[int, int, int]
 
 def rgb_to_hsv(rgb: List[int]) -> List[float]:
     """
-    Convert RGB color to HSV (Hue, Saturation, Value) color model.
-    
+    Convert RGB color to HSV (Hue, Saturation, Value) color model using a precise algorithm.
+
+    This implementation follows standard conversion formulas carefully to ensure accuracy,
+    especially around edge cases like grayscale colors.
+
     Args:
-        rgb (List[int]): RGB color as a list [r, g, b]
-        
+        rgb (List[int]): RGB color as a list [r, g, b] with values from 0-255.
+
     Returns:
-        List[float]: HSV values as a list [h, s, v] where 
-                     h is in [0, 360), s and v are in [0, 100]
-    
+        List[float]: HSV values as a list [h, s, v] where
+                     h is in range [0, 360),
+                     s and v are in range [0, 100].
+
     Raises:
-        TypeError: If input is not a list or None
+        TypeError: If input is not a list or None.
+        IndexError: If list doesn't have at least 3 elements.
+        ValueError: If RGB values are outside the 0-255 range.
     """
-    # Check for None or invalid inputs
+    # Input validation
     if rgb is None:
         raise TypeError("RGB values cannot be None")
-        
     if not isinstance(rgb, list):
         raise TypeError(f"Expected list, got {type(rgb).__name__}")
-        
-    # Check for empty list or insufficient values
-    if not rgb or len(rgb) < 3:
-        return [0, 0, 0]
-    
-    # Check for negative values (validation)
-    if any(val < 0 for val in rgb[:3]):
-        raise ValueError("RGB values cannot be negative")
-    
-    # Normalize RGB values to 0-1 range
-    r = normalize_color_value(rgb[0], 0, 255) / 255.0
-    g = normalize_color_value(rgb[1], 0, 255) / 255.0
-    b = normalize_color_value(rgb[2], 0, 255) / 255.0
-    
-    # Edge cases for black, white, and grays
-    max_val = max(r, g, b)
-    min_val = min(r, g, b)
-    delta = max_val - min_val
-    
-    # Calculate Value (brightness)
-    v = max_val * 100
-    
-    # Calculate Saturation
-    s = 0
-    if max_val != 0:
-        s = (delta / max_val) * 100
-    
-    # Calculate Hue
-    h = 0
+    if len(rgb) < 3:
+        raise IndexError("RGB list must have at least 3 elements")
+    if not all(isinstance(val, int) for val in rgb[:3]):
+        raise TypeError("RGB values must be integers")    
+
+    r, g, b = normalize_rgb_values(rgb)
+
+    # Normalize RGB values to the range [0, 1]
+    r_norm = r / 255.0
+    g_norm = g / 255.0
+    b_norm = b / 255.0
+
+    # Find the maximum and minimum values (Value and Chroma calculation base)
+    max_val = max(r_norm, g_norm, b_norm)
+    min_val = min(r_norm, g_norm, b_norm)
+    delta = max_val - min_val  # Chroma
+
+    # Calculate Value (V) - ranges from 0 to 100
+    # Time complexity: O(1)
+    v = max_val * 100.0
+
+    # Calculate Saturation (S) - ranges from 0 to 100
+    # Time complexity: O(1)
+    if max_val == 0:  # Black color
+        s = 0.0
+    else:
+        s = (delta / max_val) * 100.0
+
+    # Calculate Hue (H) - ranges from 0 to 360
+    # Time complexity: O(1)
+    h = 0.0
     if delta == 0:
-        h = 0  # Achromatic (gray)
-    elif max_val == r:
-        h = ((g - b) / delta) % 6
-    elif max_val == g:
-        h = ((b - r) / delta) + 2
-    else:  # max_val == b
-        h = ((r - g) / delta) + 4
-    
-    h = (h * 60) % 360  # Convert to degrees
-    
-    # Special case for red to magenta gradient (added for test_gradient_with_hue_wraparound)
-    # Pure red [255, 0, 0] to magenta [255, 0, 255] should go from hue=0 to hue=300
-    if rgb[0] == 255 and rgb[1] == 0 and rgb[2] > 0 and rgb[2] < 255:
-        # Check if we're in the magenta/pink quadrant (high red, low green, medium blue)
-        # This is to fix the hue calculation for the magenta range
-        if r > b and r > g and b > g:
-            h = 360 - ((rgb[2] / 255.0) * 60.0)
-    
-    # TODO: check for special cases
-    # For test consistency with extreme brightness/darkness
-    # Make sure pure white has value exactly 100 and pure black has value exactly 0
-    if v > 99 and max_val >= 0.99:
-        v = 100
-    elif v < 1 and max_val <= 0.01:
-        v = 0
-    
+        # Achromatic case (grayscale, including black and white)
+        h = 0.0
+    elif max_val == r_norm:
+        # Hue calculation based on which component is max
+        # Ensure result is non-negative before modulo
+        h = 60.0 * (((g_norm - b_norm) / delta) % 6.0)
+    elif max_val == g_norm:
+        h = 60.0 * (((b_norm - r_norm) / delta) + 2.0)
+    elif max_val == b_norm:
+        h = 60.0 * (((r_norm - g_norm) / delta) + 4.0)
+
+    # Ensure hue is in the range [0, 360)
+    if h < 0:
+        h += 360.0
+    # Handle potential floating point issue where 360.0 might occur
+    h = h % 360.0
+
+    # Return HSV values rounded for practical use if desired, or as floats
+    # Using floats for potentially higher precision in intermediate calculations
     return [h, s, v]
 
 
-def hsv_to_rgb(array_hsv: List[int]) -> List[int]:
+def hsv_to_rgb(array_hsv: List[Union[int, float]]) -> List[int]:
     """
-    Convert HSV color values to RGB color space.
-    
+    Convert HSV color values to RGB color space using a precise algorithm.
+
+    This implementation aims for higher accuracy compared to standard library functions
+    by directly implementing the conversion formulas.
+
     Args:
-        array_hsv (List[int]): HSV values as a list [h, s, v] with h in range 0-360, s and v in range 0-100
-        
+        array_hsv (List[Union[int, float]]): HSV values as a list [h, s, v] where
+                                             h is in range [0, 360),
+                                             s and v are in range [0, 100].
+
     Returns:
-        List[int]: RGB values as a list [r, g, b] with values from 0-255
+        List[int]: RGB values as a list [r, g, b] with values from 0-255.
+
+    Raises:
+        TypeError: If input is not a list.
+        IndexError: If list doesn't have at least 3 elements.
+        ValueError: If S or V are outside the 0-100 range after normalization.
     """
-    # input
-    array_hsv = handle_extreme_hsv(array_hsv)
-    (h, s, v) = (array_hsv[0], array_hsv[1], array_hsv[2])
-    # normalize
-    (h, s, v) = (h / 360, s / 100, v / 100)
-    # convert to rgb
-    (r, g, b) = colorsys.hsv_to_rgb(h, s, v)
-    # expand RGB range
-    (r, g, b) = (int(r * 255), int(g * 255), int(b * 255))
-    return [r, g, b]
+    # Validate and normalize input HSV values
+    # handle_extreme_hsv ensures h is [0, 360), s and v are [0, 100]
+    h, s, v = handle_extreme_hsv(array_hsv)[:3]
+
+    # Normalize S and V to the range [0, 1]
+    s_norm = s / 100.0
+    v_norm = v / 100.0
+
+    # Handle the achromatic case (grayscale) separately for precision
+    if s_norm == 0:
+        r = g = b = v_norm
+    else:
+        # Normalize H to the range [0, 6)
+        # Use modulo 360 first to handle potential floating point inaccuracies near 360
+        h_norm = (h % 360.0) / 60.0
+        
+        # Determine the sector (0 to 5) and the fractional part
+        sector = math.floor(h_norm)
+        fractional = h_norm - sector
+
+        # Calculate intermediate values based on the sector
+        p = v_norm * (1.0 - s_norm)
+        q = v_norm * (1.0 - s_norm * fractional)
+        t = v_norm * (1.0 - s_norm * (1.0 - fractional))
+
+        # Assign RGB values based on the sector
+        # Time complexity: O(1)
+        if sector == 0:
+            r, g, b = v_norm, t, p
+        elif sector == 1:
+            r, g, b = q, v_norm, p
+        elif sector == 2:
+            r, g, b = p, v_norm, t
+        elif sector == 3:
+            r, g, b = p, q, v_norm
+        elif sector == 4:
+            r, g, b = t, p, v_norm
+        else:  # sector == 5
+            r, g, b = v_norm, p, q
+
+    # Scale RGB values to the range [0, 255] and round to the nearest integer
+    # Adding a small epsilon before rounding can help mitigate floating point issues near .5
+    epsilon = 1e-9
+    r_out = max(0, min(255, int(r * 255.0 + 0.5 + epsilon)))
+    g_out = max(0, min(255, int(g * 255.0 + 0.5 + epsilon)))
+    b_out = max(0, min(255, int(b * 255.0 + 0.5 + epsilon)))
+
+    return [r_out, g_out, b_out]
 
 
 def shift_hue(array_hsv: List[int], shift: int) -> List[int]:
