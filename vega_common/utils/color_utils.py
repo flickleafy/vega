@@ -300,9 +300,12 @@ def normalize_rgb_values(rgb: List[int]) -> List[int]:
     Returns:
         List[int]: Normalized RGB values
     """
-    if not rgb or len(rgb) < 3:
-        return rgb
-    
+    # Return normalized list for partial or empty input
+    if not rgb:
+        return []
+    if len(rgb) < 3:
+        return [normalize_color_value(val) for val in rgb]
+    # Normalize first three values for full RGB lists
     return [normalize_color_value(val) for val in rgb[:3]]
 
 
