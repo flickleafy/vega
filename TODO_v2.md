@@ -4,7 +4,11 @@
 
 I noticed that the project already has a good start with `vega_common.utils.list_process`, but there are still instances where similar list processing functions are duplicated:
 
-- [x] The shared library already implements `remove_first_add_last()` and `list_average()` functions for temperature averaging
+- [x] The shared library already implements:
+  - [x] `remove_first_add_last()`
+  - [x] `list_average()`
+  - [x] `safe_get()`
+  - [x] `create_sliding_window()`
 - [ ] The wcThread.py file uses `listProcess.remove_first_add_last()` and `listProcess.list_average()` functions for temperature averaging, which are already in the shared library.
 - [ ] We should ensure all components are using the shared implementations consistently.
 
@@ -12,14 +16,18 @@ I noticed that the project already has a good start with `vega_common.utils.list
 
 Temperature-related functionality appears in multiple places:
 
-- [x] `estimate_cpu_from_liquid_temp()` function is already implemented in temperature_utils.py
-- [x] Fan speed calculation based on temperature is implemented (`calculate_safe_fan_speed()`, `gpu_temp_to_fan_speed()`, `cpu_temp_to_fan_speed()`)
-- [x] Basic temperature conversion functions are implemented (celsius_to_fahrenheit, fahrenheit_to_celsius)
+- [x] Temperature utilities are implemented in `temperature_utils.py`:
+  - [x] `celsius_to_fahrenheit()`, `fahrenheit_to_celsius()`
+  - [x] `estimate_cpu_from_liquid_temp()`
+  - [x] Fan speed calculations: `calculate_safe_fan_speed()`, `gpu_temp_to_fan_speed()`, `cpu_temp_to_fan_speed()`
+  - [x] `normalize_temperature()`
+  - [x] `average_temperatures()` (with outlier handling)
+  - [x] `calculate_temperature_trend()`
+  - [x] `create_temperature_window()` (using `NumericSlidingWindow`)
+  - [x] `temperature_within_range()`
+  - [x] `classify_temperature()`
 - [x] Temperature utilities have comprehensive test coverage
-- [x] Temperature normalization, averaging, and conversion functions implemented in temperature_utils.py (`normalize_temperature()`, `average_temperatures()`, etc.)
-- [x] Temperature trend analysis implemented (`calculate_temperature_trend()`)
-- [x] Temperature classification functionality implemented (`classify_temperature()`, `temperature_within_range()`)
-- [ ] These should all be standardized in `vega_common.utils.temperature_utils`.
+- [ ] These should all be standardized in `vega_common.utils.temperature_utils` (Migration task for legacy code).
 - [ ] Add unified fan speed control algorithms
 - [ ] Create standard temperature range mapping functions
 - [ ] Implement robust temperature averaging with configurable window sizes
@@ -28,13 +36,15 @@ Temperature-related functionality appears in multiple places:
 
 The project has already made progress centralizing color utilities, but we can go further:
 
-- [x] Basic color conversion functions are implemented (rgb_to_hsv, hsv_to_rgb, rgb_to_hex, hex_to_rgb)
-- [x] Color manipulation functions are implemented (shift_hue, adjust_brightness, normalize_color_value)
-- [x] The lightingColor.py module contains specialized RGB color transformations like `aorus_x470_hue_fix()` that have been moved to the shared library
-- [x] Hardware-specific RGB profiles are implemented in the shared library
-- [x] Functions like `calculate_color_signature()` and `calculate_color_distance()` are implemented
-- [x] Color similarity checking with `colors_are_similar()` is implemented
-- [ ] RGB-to-HSV-to-RGB conversion chains are duplicated
+- [x] Color utilities are implemented in `color_utils.py`:
+  - [x] Conversions: `rgb_to_hsv`, `hsv_to_rgb`, `rgb_to_hex`, `hex_to_rgb`
+  - [x] Manipulation: `shift_hue`, `adjust_brightness`
+  - [x] Normalization: `normalize_color_value`, `normalize_rgb_values`
+  - [x] Comparison/Analysis: `colors_are_similar`, `calculate_color_signature`, `calculate_color_distance`
+  - [x] Helpers: `rgb_to_rgbcolor`, `handle_extreme_hsv`
+- [x] Hardware-specific RGB profiles are implemented in the shared library (`hardware_rgb_profiles.py`)
+  - [x] The lightingColor.py module contains specialized RGB color transformations like `aorus_x470_hue_fix()` that have been moved to the shared library
+- [ ] RGB-to-HSV-to-RGB conversion chains are duplicated (Migration task for legacy code).
 - [ ] Add specialized hardware RGB profiles like the `aorus_x470_hue_fix` function
 - [ ] Create color gradient generation for temperature visualization
 - [ ] Add support for different RGB hardware interfaces
@@ -43,22 +53,48 @@ The project has already made progress centralizing color utilities, but we can g
 
 The file operations code is duplicated in both rootspace and userspace:
 
-- [x] `read_file()` and `write_file()` functions are already implemented in the shared library
+- [x] File utilities are implemented in `files_manipulation.py`:
+  - [x] `read_file()`
+  - [x] `write_file()`
+  - [x] `safe_open()`
+  - [x] `ensure_directory_exists()`
 - [x] Proper error handling is implemented with `safe_open()` and other utilities
-- [x] Directory creation is handled with `ensure_directory_exists()`
-- [ ] Some components are still using their own implementations instead of the shared ones
-- [ ] These functions lack proper error handling (no try/except blocks, file handles not properly closed)
+- [ ] Some components are still using their own implementations instead of the shared ones (Migration task for legacy code).
+- [ ] Some legacy functions lack proper error handling (no try/except blocks, file handles not properly closed).
 - [ ] All file operations should use context managers and proper exception handling
 - [ ] Network communications should have timeouts and retry logic
 - [ ] Hardware access should have proper fallback mechanisms
-  
+
 ## 5. Device Management and Monitoring
 
 The device monitoring code (GPU, CPU, watercooler) contains similar patterns:
 
-- [ ] Status retrieval functions follow common patterns
-- [ ] Thread management for monitoring devices is duplicated across modules
-- [ ] Data normalization and averaging techniques are repeated
+- [x] Abstract base classes for device monitoring and control are implemented:
+  - [x] `DeviceMonitor` in `device_monitor.py`
+  - [x] `DeviceController` in `device_controller.py`
+  - [x] `DeviceStatus` in `device_status.py`
+  - [x] `DeviceManager` in `device_manager.py`
+- [ ] Complete the `DeviceDetection` system in `device_detection.py` to enumerate and identify hardware
+- [ ] Implement concrete device monitor classes for specific hardware:
+  - [ ] `NvidiaGpuMonitor` - For monitoring NVIDIA GPUs using NVML
+  - [ ] `AmdGpuMonitor` - For monitoring AMD GPUs
+  - [ ] `CpuMonitor` - For monitoring CPU temperature and usage
+  - [ ] `WatercoolerMonitor` - For monitoring liquid cooling systems
+  - [ ] `SystemMonitor` - For general system metrics
+  - [ ] `MemoryMonitor` - For RAM usage tracking
+- [ ] Implement concrete device controller classes:
+  - [ ] `NvidiaGpuController` - For controlling NVIDIA GPU fan speeds and overclocking
+  - [ ] `AmdGpuController` - For controlling AMD GPU parameters
+  - [ ] `WatercoolerController` - For pump and fan control
+  - [ ] `RgbLightingController` - For controlling RGB lighting across devices
+  - [ ] `FanController` - For controlling case and CPU fans
+- [ ] Enhance device monitoring with alerts and notifications:
+  - [ ] Add threshold-based alerts to `DeviceStatus`
+  - [ ] Implement alert severity levels and notifications
+- [ ] Create unified hardware profiles that combine monitoring and control
+- [ ] Status retrieval functions follow common patterns (Migration task for legacy code).
+- [ ] Thread management for monitoring devices is duplicated across modules (Migration task for legacy code).
+- [ ] Data normalization and averaging techniques are repeated (Migration task for legacy code).
 
 ## 6. Common Sliding Window Implementations
 
@@ -71,34 +107,77 @@ cpu_last_temps = listProcess.remove_first_add_last(
     cpu_last_temps, cpu_temp)
 ```
 
-- [x] The shared library now has `SlidingWindow` class in `sliding_window.py`
+- [x] Sliding window implementation in `sliding_window.py`:
+  - [x] `SlidingWindow` (Generic base class)
+  - [x] `NumericSlidingWindow` (Specialized for numbers with stats methods: `get_average`, `get_median`, `get_max`, `get_min`, `get_sum`, `get_standard_deviation`, `get_moving_average`, `get_weighted_average`, `get_trend`)
 - [x] The shared library implements `create_sliding_window()` function
-- [ ] Legacy code should be updated to use `NumericalSlidingWindow` implementations
+- [ ] Legacy code should be updated to use these implementations (`NumericalSlidingWindow`)(Migration task for legacy code).
 
 ## 7. Command Execution and Subprocess Management
 
 There are multiple implementations of subprocess handling across the codebase:
 
-- [x] The shared library now has robust `run_cmd()`, `run_cmd_with_status()`, and `run_cmd_sudo()` functions
-- [ ] Several components still implement their own subprocess handling with varying levels of error handling
-- [ ] These implementations should be consolidated using the shared library functions
+- [x] Subprocess utilities implemented in `sub_process.py`:
+  - [x] `run_cmd()`
+  - [x] `run_cmd_with_status()`
+  - [x] `run_cmd_sudo()`
+- [ ] Several components still implement their own subprocess handling with varying levels of error handling (Migration task for legacy code).
+- [ ] These implementations should be consolidated using the shared library functions.
 
 ## 8. Date and Time Handling
 
 Date and time operations appear in multiple components:
 
-- [x] The shared library implements `get_current_time()`, `get_timestamp()`, `format_duration()`, and `is_older_than()`
-- [ ] Some components implement their own date formatting and timestamp generation
-- [ ] Time-based operations should be standardized using the shared library
+- [x] Datetime utilities implemented in `datetime_utils.py`:
+  - [x] `get_current_time()`
+  - [x] `get_timestamp()`
+  - [x] `format_duration()`
+  - [x] `is_older_than()`
+- [ ] Some components implement their own date formatting and timestamp generation (Migration task for legacy code).
+- [ ] Time-based operations should be standardized using the shared library.
+
+## 9. Device Detection and Hardware Interface
+
+The system needs a comprehensive hardware detection and interface module:
+
+- [ ] Create a unified hardware detection system in `device_detection.py` with:
+  - [ ] Automatic GPU detection and classification (NVIDIA/AMD)
+  - [ ] CPU detection including core count and architecture
+  - [ ] Hardware sensors discovery and mapping
+  - [ ] USB device enumeration for watercoolers and RGB controllers
+  - [ ] PCI device detection for expansion cards
+  - [ ] Support for hotplug events and hardware changes
+- [ ] Add hardware capabilities detection to determine available monitoring and control features
+- [ ] Implement driver availability detection to provide graceful fallbacks
 
 ## Implementation Recommendations
 
-1. **Create new modules in the shared library**:
+1. **Enhance temperature_utils.py**:
+   - Add unified fan speed control algorithms
+   - Create standard temperature range mapping functions
+   - Implement robust temperature averaging with configurable window sizes
+
+2. **Expand color_utils.py**:
+   - Add specialized hardware RGB profiles like the `aorus_x470_hue_fix` function
+   - Create color gradient generation for temperature visualization
+   - Add support for different RGB hardware interfaces
+
+3. **Complete the device monitoring framework**:
+   - Implement concrete monitor classes for each hardware type
+   - Add real-time charting and visualization capabilities
+   - Create standardized hardware control interfaces
+
+4. **Create new modules in the shared library**:
    - `device_monitoring.py` for standardized device status monitoring
    - `thread_management.py` for creating and managing monitoring threads safely
    - `sliding_window.py` for a reusable sliding window implementation
 
-2. **Improve compatibility layers**:
+5. **Add robust error handling**:
+   - All file operations should use context managers and proper exception handling
+   - Network communications should have timeouts and retry logic
+   - Hardware access should have proper fallback mechanisms
+
+6. **Improve compatibility layers**:
    - Update the compatibility layer modules in rootspace and userspace
    - Add deprecation warnings to encourage direct use of shared library
 

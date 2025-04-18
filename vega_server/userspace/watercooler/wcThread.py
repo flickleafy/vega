@@ -1,8 +1,7 @@
 import globals
-
 import time
-import vega_common.utils.list_process as listProcess
 from vega_common.utils.temperature_utils import estimate_cpu_from_liquid_temp
+from vega_common.utils.sliding_window import NumericSlidingWindow
 import watercooler.wcStatus as wcStatus
 import watercooler.cpuStatus as cpuStatus
 import lighting.lightingColor as lightingColor
@@ -12,7 +11,8 @@ VALUE_COLUMN = 1
 LIQUID_TEMPERATURE_ROW = 0
 FAN_SPEED_ROW = 1
 PUMP_SPEED_ROW = 2
-                
+TEMPERATURE_WINDOW_SIZE = 10
+
 def watercooler_thread(_):
     """Monitor and control watercooler system.
     
@@ -29,8 +29,8 @@ def watercooler_thread(_):
     Returns:
         None: This thread runs continuously.
     """
-    wc_last_temps = 0
-    cpu_last_temps = 0
+    wc_temp_window = NumericSlidingWindow(size=TEMPERATURE_WINDOW_SIZE)
+    cpu_temp_window = NumericSlidingWindow(size=TEMPERATURE_WINDOW_SIZE)
     devices = wcStatus.wc_initialize()
     
     if len(devices) > 0:
@@ -50,18 +50,16 @@ def watercooler_thread(_):
                     # Use common temperature utility instead
                     cpu_temp = estimate_cpu_from_liquid_temp(wc_temp)
 
-                if wc_last_temps == 0:
-                    wc_last_temps = [wc_temp] * 7
+                # Fill windows if they are empty (only happens on first iteration)
+                wc_temp_window.fill(wc_temp)
+                cpu_temp_window.fill(cpu_temp)
 
-                    cpu_last_temps = [cpu_temp] * 7
+                # Add current temperatures to sliding windows
+                wc_temp_window.add(wc_temp)
+                cpu_temp_window.add(cpu_temp)
 
-                wc_last_temps = listProcess.remove_first_add_last(
-                    wc_last_temps, wc_temp)
-                cpu_last_temps = listProcess.remove_first_add_last(
-                    cpu_last_temps, cpu_temp)
-
-                wc_average_temp = listProcess.list_average(wc_last_temps)
-                cpu_average_temp = listProcess.list_average(cpu_last_temps)
+                wc_average_temp = wc_temp_window.get_average()
+                cpu_average_temp = cpu_temp_window.get_average()
                 weighed_average_temp = (
                     wc_average_temp + (cpu_average_temp * 0.85)) / 2
 
