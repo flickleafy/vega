@@ -14,6 +14,7 @@ The `vega_common` library centralizes utilities used throughout the Vega ecosyst
 - **DateTime Operations**: Consistent date and time formatting and manipulation
 - **Color Utilities**: Color format conversion (RGB, HSV, HEX) and manipulation functions
 - **Temperature Utilities**: Temperature conversion, estimation, and fan speed calculation
+- **Device Management**: Framework for monitoring and controlling hardware devices (CPU, GPU, etc.)
 
 ## Library Structure
 
@@ -25,8 +26,16 @@ vega_common/
     ├── __init__.py
     ├── color_utils.py        # Color manipulation and conversion functions
     ├── datetime_utils.py     # Date and time handling functions
+    ├── device_controller.py  # Abstract base class for device control
+    ├── device_detection.py   # Abstract base class for device detection
+    ├── device_manager.py     # Manages multiple device monitors/controllers
+    ├── device_monitor.py     # Abstract base class for device monitoring
+    ├── device_status.py      # Stores and tracks device state
     ├── files_manipulation.py # File I/O with enhanced error handling
+    ├── gpu_devices.py        # Concrete implementations for NVIDIA GPU monitoring/control
+    ├── hardware_rgb_profiles.py # Hardware-specific RGB color profiles
     ├── list_process.py       # List manipulation utilities
+    ├── sliding_window.py     # Sliding window implementations
     ├── sub_process.py        # Shell command execution utilities
     └── temperature_utils.py  # Temperature conversion and calculation functions
 ```
@@ -93,6 +102,63 @@ estimated_cpu = estimate_cpu_from_liquid_temp(liquid_temp)
 print(f"Liquid at {liquid_temp}°C suggests CPU around {estimated_cpu}°C")  # Estimation based on liquid temp
 ```
 
+### Device Management
+
+```python
+from vega_common.utils.device_manager import DeviceManager
+from vega_common.utils.gpu_devices import NvidiaGpuMonitor, NvidiaGpuController
+import time
+import logging
+
+# Setup basic logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Initialize the manager
+manager = DeviceManager()
+
+# Assuming NVML is available and GPU index 0 exists
+try:
+    gpu_monitor = NvidiaGpuMonitor(device_index=0, monitoring_interval=2.0)
+    gpu_controller = NvidiaGpuController(device_index=0)
+    
+    manager.register_monitor(gpu_monitor)
+    manager.register_controller(gpu_controller)
+    
+    # Start monitoring in background threads
+    manager.start_all_monitors()
+    
+    # Let monitors run for a bit
+    time.sleep(5) 
+    
+    # Get status
+    status = manager.get_device_status(gpu_monitor.device_type, gpu_monitor.device_id)
+    if status:
+        temp = status.get_property('temperature')
+        fan_speed = status.get_property('fan_speed_1') # Assuming fan 1 exists
+        logging.info(f"GPU {gpu_monitor.device_id}: Temp={temp}°C, Fan Speed={fan_speed}%")
+
+    # Apply settings (Example: set fan speed - requires root/permissions)
+    # Note: Fan control might require specific system setup (e.g., coolbits)
+    # success = manager.apply_device_settings(
+    #     gpu_controller.device_type, 
+    #     gpu_controller.device_id, 
+    #     {'fan_speed_1': 50, 'fan_speed_2': 50} # Set both fans to 50%
+    # )
+    # if success:
+    #     logging.info("Successfully applied fan speed settings.")
+    # else:
+    #     logging.warning("Failed to apply fan speed settings (permissions or NVML issue?).")
+
+except Exception as e:
+    logging.error(f"Error setting up or using device manager: {e}")
+
+finally:
+    # Stop monitoring threads gracefully
+    manager.stop_all_monitors()
+    logging.info("Device monitoring stopped.")
+
+```
+
 ## Testing
 
 The library includes a comprehensive test suite using pytest to ensure all functionality works correctly across different contexts.
@@ -106,8 +172,11 @@ tests/
     └── utils/
         ├── test_color_utils.py          # Tests for color utilities
         ├── test_datetime_utils.py       # Tests for datetime utilities
+        ├── test_device_management.py    # Tests for device monitor/controller/manager
         ├── test_files_manipulation.py   # Tests for file operations
+        ├── test_gpu_devices.py          # Tests for GPU specific classes (requires NVML/mocking)
         ├── test_list_process.py         # Tests for list manipulation
+        ├── test_sliding_window.py       # Tests for sliding window
         ├── test_sub_process.py          # Tests for subprocess operations
         └── test_temperature_utils.py    # Tests for temperature utilities
 ```
@@ -221,4 +290,6 @@ Run `pydoc` to view the documentation:
 
 ```bash
 pydoc vega_common.utils.datetime_utils
+pydoc vega_common.utils.device_manager
+pydoc vega_common.utils.gpu_devices
 ```

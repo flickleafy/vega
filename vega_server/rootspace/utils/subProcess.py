@@ -1,31 +1,16 @@
-import subprocess as sb
+"""
+Subprocess execution utilities for the rootspace component.
 
-from globals import ERROR_MESSAGE
+This module re-exports the run_cmd function from the vega_common library
+to maintain backward compatibility while reducing code duplication.
+"""
+# Import the centralized function from the common library
+# Complexity: O(1) for import
+from vega_common.utils.sub_process import run_cmd
 
+# The run_cmd function is now available for import from this module,
+# preserving compatibility for modules that import from here.
+# The original duplicated implementation has been removed.
 
-def run_cmd(cmd: list[str]):
-    """Execute a command in the operational system
-
-    Args:
-        cmd (list[str]): the application to be executed and its arguments
-    """
-    try:
-        process = sb.Popen(" ".join(cmd), shell=True, stdout=sb.PIPE,
-                           stderr=sb.PIPE)
-        stdout, stderr = process.communicate()
-        process_output = clean_output(stdout.strip())
-        process_error = clean_output(stderr.strip())
-
-        if len(process_output) > 1:
-            print('subprocess result: ', process_output)
-        else:
-            print('subprocess error: ', process_error)
-
-        return stdout
-    except Exception as err:
-        print(ERROR_MESSAGE, err)
-
-
-def clean_output(output):
-    output = str(output).replace('b', '').replace("'", '')
-    return output
+# Note: The clean_output function was specific to the old implementation's
+# Popen usage and is no longer needed as run_cmd handles output directly.

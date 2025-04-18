@@ -2,7 +2,7 @@ from vega_common.utils.sliding_window import NumericSlidingWindow
 
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union, Optional
 
 
 class DeviceStatus:
