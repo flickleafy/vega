@@ -177,3 +177,13 @@ class DeviceStatus:
             Optional[str]: Error message if one exists, None otherwise.
         """
         return self.errors.get(property_name)
+        
+    def clear_errors(self) -> None:
+        """
+        Clear all error messages.
+        
+        This is useful during cleanup or when resetting the status object.
+        
+        Complexity: O(1) - Dictionary clear operation.
+        """
+        self.errors.clear()
