@@ -14,7 +14,7 @@ class DeviceController(ABC):
         device_type (str): Type of the controlled device.
     """
 
-    def __init__(self, device_id: str, device_type: str):
+    def __init__(self, device_id: str, device_type: str, device_name: str = None):
         """
         Initialize a DeviceController.
 
@@ -24,6 +24,7 @@ class DeviceController(ABC):
         """
         self.device_id = device_id
         self.device_type = device_type
+        self.device_name = device_name 
 
     @abstractmethod
     def apply_settings(self, settings: Dict[str, Any]) -> bool:

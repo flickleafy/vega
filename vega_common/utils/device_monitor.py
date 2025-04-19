@@ -32,6 +32,7 @@ class DeviceMonitor(ABC):
     def __init__(self, 
                  device_id: str, 
                  device_type: str, 
+                 device_name: str = None,
                  monitoring_interval: float = 3.0,
                  tracked_properties: List[str] = None):
         """
@@ -47,6 +48,7 @@ class DeviceMonitor(ABC):
         """
         self.device_id = device_id
         self.device_type = device_type
+        self.device_name = device_name 
         self.status = DeviceStatus(device_id, device_type)
         self.monitoring_interval = monitoring_interval
         self.is_monitoring = False
