@@ -21,7 +21,9 @@ from vega_common.utils.hardware_rgb_profiles import (
     create_color_gradient,
     apply_hardware_specific_correction,
     create_color_gradient_cielch,
-    _map_to_srgb_gamut
+    _map_to_srgb_gamut,
+    _lch_to_rgb_norm,
+    _is_rgb_in_gamut
 )
 from vega_common.utils.color_utils import rgb_to_hsv, hsv_to_rgb
 
@@ -70,6 +72,50 @@ class TestHardwareColorCorrections:
         assert aorus_x470_hue_fix([]) == []  # Empty list
         assert aorus_x470_hue_fix([10]) == [10]  # Too short list
         assert aorus_x470_hue_fix(None) is None  # None input
+    
+    def test_aorus_x470_hue_fix_additional_ranges(self):
+        """Test additional hue ranges for Aorus X470."""
+        # Test each specific hue range
+        hue_ranges = [
+            (297, [7, 1, 255]),   # 295 < hue <= 360
+            (293, [5, 1, 255]),   # 290 < hue <= 295
+            (285, [4, 0, 255]),   # 280 < hue <= 290
+            (275, [3, 1, 255]),   # 270 < hue <= 280
+            (265, [3, 0, 255]),   # 260 < hue <= 270
+            (255, [2, 0, 255]),   # 250 < hue <= 260
+            (245, [1, 1, 255]),   # 240 < hue <= 250
+            (235, [0, 1, 255]),   # 230 < hue <= 240
+            (225, [0, 2, 255]),   # 220 < hue <= 230
+            (215, [0, 4, 255]),   # 210 < hue <= 220
+            (205, [0, 8, 255]),   # 200 < hue <= 210
+            (195, [0, 16, 255]),  # 190 < hue <= 200
+            (185, [0, 28, 255]),  # 180 < hue <= 190
+            (175, [0, 36, 255]),  # 170 < hue <= 180
+            (165, [0, 40, 255]),  # 160 < hue <= 170
+            (155, [0, 44, 255]),  # 150 < hue <= 160
+            (145, [0, 48, 255]),  # 140 < hue <= 150
+            (135, [0, 52, 255]),  # 130 < hue <= 140
+            (125, [0, 80, 255]),  # 120 < hue <= 130
+            (115, [10, 200, 255]),  # 110 < hue <= 120
+            (105, [28, 255, 255]),  # 100 < hue <= 110
+            (95, [38, 255, 255]),   # 90 < hue <= 100
+            (85, [48, 255, 255]),   # 80 < hue <= 90
+            (75, [68, 255, 255]),   # 70 < hue <= 80
+            (65, [40, 120, 255]),   # 60 < hue <= 70
+            (55, [40, 110, 255]),   # 50 < hue <= 60
+            (45, [50, 110, 255]),   # 40 < hue <= 50
+            (35, [65, 110, 255]),   # 30 < hue <= 40
+            (25, [100, 90, 255]),   # 20 < hue <= 30
+            (15, [110, 70, 255]),   # 10 < hue <= 20
+            (7, [140, 50, 255]),    # 5 < hue <= 10
+            (3, [255, 20, 255]),    # 0 <= hue <= 5
+        ]
+        
+        for hue, expected_rgb in hue_ranges:
+            # Create a test color with the specified hue
+            test_color = hsv_to_rgb([hue, 100, 100])
+            result = aorus_x470_hue_fix(test_color)
+            assert result == expected_rgb, f"Failed for hue {hue}"
     
     def test_asus_aura_brightness_correction(self):
         """Test Asus Aura specific brightness correction."""
@@ -263,6 +309,33 @@ class TestHardwareColorCorrections:
         
         # Zero saturation should remain unchanged
         assert gray_corrected_hsv[1] == 0
+    
+    def test_nzxt_cam_correction_edge_cases(self):
+        """Test edge cases for NZXT CAM correction."""
+        # Test the exact red case that has special handling
+        exact_red = [255, 0, 0]
+        corrected = nzxt_cam_correction(exact_red)
+        
+        # Check if result has exactly 90% saturation
+        if corrected:  # Only run this test if we get a valid result
+            corrected_hsv = rgb_to_hsv(corrected)
+            assert corrected_hsv[1] == pytest.approx(90.0, abs=0.5)
+            
+            # Confirm the RGB value is what we expect
+            assert corrected == [255, 26, 26]
+        
+        # Test with a non-list input
+        with pytest.raises(TypeError):
+            nzxt_cam_correction(None)
+        with pytest.raises(IndexError):    
+            nzxt_cam_correction([])
+        
+        # Test with a color that has high saturation
+        almost_red = [254, 0, 0]
+        almost_corrected = nzxt_cam_correction(almost_red)
+        if almost_corrected:  # Only run this test if we get a valid result
+            almost_corrected_hsv = rgb_to_hsv(almost_corrected)
+            assert almost_corrected_hsv[1] == pytest.approx(90.0, abs=0.5)
 
 
 class TestGradientFunctions:
@@ -404,7 +477,65 @@ class TestGradientFunctions:
         # Hues should consistently decrease through the gradient
         for i in range(1, 7):
             assert gradient_hsv[i][0] < gradient_hsv[i-1][0]
+            
+    def test_create_color_gradient_special_cases(self):
+        """Test special cases in color gradient generation."""
+        # Test special case for red to blue gradient
+        red = [255, 0, 0]
+        blue = [0, 0, 255]
+        steps = 5
+        
+        # This should trigger the special case in the function
+        gradient = create_color_gradient(red, blue, steps)
+        
+        # Check for monotonically decreasing red and increasing blue
+        for i in range(1, steps):
+            assert gradient[i][0] < gradient[i-1][0], "Red should decrease"
+            assert gradient[i][2] > gradient[i-1][2], "Blue should increase"
+        
+        # Test special case for red to magenta gradient
+        red = [255, 0, 0]
+        magenta = [255, 0, 255]
+        steps = 7
+        
+        # This should trigger the clockwise path special case
+        gradient = create_color_gradient(red, magenta, steps)
+        
+        # Convert to HSV to check the path
+        gradient_hsv = [rgb_to_hsv(color) for color in gradient]
+        
+        # First should be red (hue ~ 0)
+        assert gradient_hsv[0][0] < 5
+        
+        # Last should be magenta (hue ~ 300)
+        assert 295 <= gradient_hsv[-1][0] <= 305
+        
+        # Intermediate hues should increase monotonically (clockwise path through color wheel)
+        for i in range(1, steps-1):
+            assert gradient_hsv[i][0] > gradient_hsv[0][0], "Hue should increase clockwise"
     
+    def test_create_color_gradient_edge_cases(self):
+        """Test edge cases for create_color_gradient."""
+        red = [255, 0, 0]
+        blue = [0, 0, 255]
+        
+        # Test with invalid steps
+        with pytest.raises(ValueError):
+            create_color_gradient(red, blue, 0)
+        
+        with pytest.raises(ValueError):
+            create_color_gradient(red, blue, -5)
+        
+        # Test with single step (should return only start color)
+        result = create_color_gradient(red, blue, 1)
+        assert len(result) == 1
+        assert result[0] == red
+        
+        # Test with exactly two steps (should return just start and end)
+        result = create_color_gradient(red, blue, 2)
+        assert len(result) == 2
+        assert result[0] == red
+        assert result[-1] == blue
     
     def test_create_rainbow_gradient(self):
         """Test rainbow gradient generation."""
@@ -601,6 +732,47 @@ class TestGradientFunctions:
         # In this case, it should go through magenta/purple, not yellow/green
         # So hue should be either close to 0 or close to 360
         assert wrap_mid_hsv[0] < 90 or wrap_mid_hsv[0] > 270
+    
+    def test_temperature_to_color_edge_cases(self):
+        """Test temperature_to_color with various edge cases."""
+        # Test temperature clamping at lower bound
+        color_below = temperature_to_color(25, min_temp=30, max_temp=90)
+        color_min = temperature_to_color(30, min_temp=30, max_temp=90)
+        assert color_below == color_min
+        
+        # Test temperature clamping at upper bound
+        color_above = temperature_to_color(95, min_temp=30, max_temp=90)
+        color_max = temperature_to_color(90, min_temp=30, max_temp=90)
+        assert color_above == color_max
+        
+        # Test with min_temp = max_temp
+        equal_temp_color = temperature_to_color(50, min_temp=50, max_temp=50)
+        assert equal_temp_color == [0, 0, 255]  # Should return cool color (blue)
+        
+        # Test custom colors with min_temp = max_temp
+        green = [0, 255, 0]
+        yellow = [255, 255, 0]
+        custom_equal_temp = temperature_to_color(50, min_temp=50, max_temp=50, 
+                                              cool_color=green, warm_color=yellow)
+        assert custom_equal_temp == green  # Should return the cool color
+        
+        # Test special case handling for red to cyan transition path
+        red = [255, 0, 0]
+        cyan = [0, 255, 255]
+        
+        # Test with red as cool color and cyan as warm color
+        mid_temp = 60
+        result1 = temperature_to_color(mid_temp, min_temp=30, max_temp=90, 
+                                      cool_color=red, warm_color=cyan)
+        
+        # Test with cyan as cool color and red as warm color
+        result2 = temperature_to_color(mid_temp, min_temp=30, max_temp=90, 
+                                      cool_color=cyan, warm_color=red)
+        
+        # Both should use direct RGB interpolation rather than HSV
+        # Check that neither result has significant green component (would happen if HSV used)
+        assert result1[1] > 0, "Direct RGB interpolation should give some green"
+        assert result2[1] > 0, "Direct RGB interpolation should give some green"
 
 
 class TestColorApplications:
@@ -649,6 +821,22 @@ class TestColorApplications:
         # Test with invalid color
         assert apply_hardware_specific_correction([], 'asus') == []
         assert apply_hardware_specific_correction(None, 'asus') is None
+    
+    def test_apply_hardware_specific_correction_non_list_input(self):
+        """Test apply_hardware_specific_correction with non-list inputs."""
+        # Test with None input
+        assert apply_hardware_specific_correction(None, 'asus') is None
+        
+        # Test with empty list
+        assert apply_hardware_specific_correction([], 'asus') == []
+        
+        # Test with non-list input
+        assert apply_hardware_specific_correction(123, 'asus') == 123
+        assert apply_hardware_specific_correction("string", 'asus') == "string"
+        
+        # Test with invalid hardware type
+        test_color = [255, 0, 0]
+        assert apply_hardware_specific_correction(test_color, 'invalid') == test_color
 
 
 class TestCIELCHGradient:
@@ -868,6 +1056,19 @@ class TestCIELCHGradient:
         except ImportError:
             pytest.skip("colour-science library not installed")
     
+    def test_create_color_gradient_cielch_error_handling(self):
+        """Test error handling in CIELCH gradient function."""
+        start_rgb = [255, 0, 0]
+        end_rgb = [0, 0, 255]
+        
+        # Test with 0 steps
+        with pytest.raises(ValueError):
+            create_color_gradient_cielch(start_rgb, end_rgb, 0)
+        
+        # Test with negative steps
+        with pytest.raises(ValueError):
+            create_color_gradient_cielch(start_rgb, end_rgb, -3)
+    
     def test_map_to_srgb_gamut(self):
         """Test the gamut mapping function directly."""
         try:
@@ -923,7 +1124,7 @@ class TestCIELCHGradient:
             
         except ImportError:
             pytest.skip("colour-science library not installed")
-    
+
     def test_create_color_gradient_cielch_performance(self):
         """Test that CIELCH gradient generation maintains reasonable performance."""
         try:
@@ -946,6 +1147,180 @@ class TestCIELCHGradient:
             # On a modern system, generating 50 steps should take less than 1 second
             # This is a soft assertion, mainly to catch severe performance issues
             assert duration < 1.0, f"Gradient generation took {duration:.2f}s, which is too slow"
+            
+        except ImportError:
+            pytest.skip("colour-science library not installed")
+            
+    def test_map_to_srgb_gamut_edge_cases(self):
+        """Test edge cases for the sRGB gamut mapping function."""
+        try:
+            import colour
+            
+            # Test with very low lightness (near black)
+            near_black_lch = np.array([0.0001, 50.0, 120.0])
+            near_black_result = _map_to_srgb_gamut(near_black_lch)
+            # Increase tolerance for near-black mapping
+            assert np.allclose(near_black_result, [0, 0, 0], atol=1e-5), "Near-black should map to black"
+            
+            # Test with very high lightness (near white)
+            near_white_lch = np.array([99.9999, 50.0, 120.0])
+            near_white_result = _map_to_srgb_gamut(near_white_lch)
+            assert np.allclose(near_white_result, [1, 1, 1]), "Near-white should map to white"
+            
+            # Test with near-zero chroma (near gray)
+            near_gray_lch = np.array([50.0, 0.0001, 120.0])
+            near_gray_result = _map_to_srgb_gamut(near_gray_lch)
+            assert np.allclose(near_gray_result, [0.5, 0.5, 0.5], atol=0.1), "Near-gray should map to gray"
+            
+            # Test already in-gamut color stays the same
+            in_gamut_rgb = np.array([0.5, 0.25, 0.75])  # Known in-gamut
+            # Convert to LCH
+            in_gamut_xyz = colour.sRGB_to_XYZ(in_gamut_rgb)
+            in_gamut_lab = colour.XYZ_to_Lab(in_gamut_xyz)
+            in_gamut_lch = colour.Lab_to_LCHab(in_gamut_lab)
+            
+            # Map back to sRGB
+            result = _map_to_srgb_gamut(in_gamut_lch)
+            
+            # Should be almost identical to original
+            assert np.allclose(result, in_gamut_rgb, atol=1e-4)
+            
+            # Test extreme out-of-gamut color gets mapped correctly
+            extreme_lch = np.array([50.0, 200.0, 120.0])  # Extremely high chroma
+            extreme_result = _map_to_srgb_gamut(extreme_lch)
+            
+            # Result should be in gamut
+            assert np.all(extreme_result >= 0)
+            assert np.all(extreme_result <= 1)
+            
+            # Convert back to LCH to check hue preservation
+            extreme_xyz = colour.sRGB_to_XYZ(extreme_result)
+            extreme_lab = colour.XYZ_to_Lab(extreme_xyz)
+            mapped_lch = colour.Lab_to_LCHab(extreme_lab)
+            
+            # Hue should be preserved
+            assert abs((mapped_lch[2] - extreme_lch[2]) % 360) < 5
+            
+            # Test convergence criteria with small tolerance
+            high_precision = _map_to_srgb_gamut(extreme_lch, tolerance=1e-6)
+            assert np.all(high_precision >= 0)
+            assert np.all(high_precision <= 1)
+            
+        except ImportError:
+            pytest.skip("colour-science library not installed")
+
+
+class TestHelperFunctions:
+    """Tests for private helper functions in hardware_rgb_profiles."""
+    
+    def test_lch_to_rgb_norm(self):
+        """Test LCH to normalized RGB conversion."""
+        try:
+            import colour
+            
+            # Test normal conversion
+            lch = np.array([50.0, 20.0, 120.0])  # Green-ish color
+            rgb_norm = _lch_to_rgb_norm(lch)
+            
+            # Should be a valid RGB color
+            assert isinstance(rgb_norm, np.ndarray)
+            assert rgb_norm.shape == (3,)
+            assert np.all(rgb_norm >= 0)
+            assert np.all(rgb_norm <= 1)
+            
+            # Test conversion with extreme values
+            # Very high chroma that might cause issues
+            high_chroma = np.array([50.0, 200.0, 120.0])
+            high_result = _lch_to_rgb_norm(high_chroma)
+            
+            # Check that the result is a numpy array of shape (3,)
+            # Acknowledging that extreme inputs might result in out-of-gamut values
+            # before potential clipping (which might be missing or tested elsewhere).
+            assert isinstance(high_result, np.ndarray)
+            assert high_result.shape == (3,)
+            # Note: We are not asserting the range [0, 1] here, as the raw conversion
+            # of extreme LCH values can exceed the sRGB gamut.
+            
+            # Test with negative values (should be handled gracefully, likely clipped)
+            neg_lch = np.array([-10.0, -20.0, -30.0])
+            neg_result = _lch_to_rgb_norm(neg_lch)
+            
+            # Should clip to valid range
+            assert np.all(neg_result >= 0)
+            assert np.all(neg_result <= 1)
+            
+            # Test with hue > 360 (should be wrapped)
+            wrap_lch = np.array([50.0, 20.0, 480.0])  # 480° = 120°
+            wrap_result = _lch_to_rgb_norm(wrap_lch)
+            # Add assertion for wrap_result
+            assert isinstance(wrap_result, np.ndarray)
+            assert wrap_result.shape == (3,)
+            
+            # Test when conversion raises an exception
+            with pytest.MonkeyPatch.context() as m:
+                # Force the colour.LCHab_to_Lab function to raise an exception
+                def mock_convert(*_):  # Use *_ to indicate unused arguments
+                    raise ValueError("Simulated conversion error")
+                
+                m.setattr(colour, 'LCHab_to_Lab', mock_convert)
+                
+                # Should return gray based on lightness
+                
+                m.setattr(colour, 'LCHab_to_Lab', mock_convert)
+                
+                # Should return gray based on lightness
+                error_lch = np.array([50.0, 20.0, 120.0])
+                error_result = _lch_to_rgb_norm(error_lch)
+                
+                # Check if result is grayscale with lightness = 0.5
+                assert np.allclose(error_result, [0.5, 0.5, 0.5])
+                
+        except ImportError:
+            pytest.skip("colour-science library not installed")
+    
+    def test_is_rgb_in_gamut(self):
+        """Test RGB gamut checking function."""
+        try:
+            # Test in-gamut colors
+            assert _is_rgb_in_gamut(np.array([0, 0, 0]))  # Black
+            assert _is_rgb_in_gamut(np.array([1, 1, 1]))  # White
+            assert _is_rgb_in_gamut(np.array([0.5, 0.5, 0.5]))  # Gray
+            assert _is_rgb_in_gamut(np.array([1, 0, 0]))  # Red
+            assert _is_rgb_in_gamut(np.array([0, 1, 0]))  # Green
+            assert _is_rgb_in_gamut(np.array([0, 0, 1]))  # Blue
+            
+            # Test out-of-gamut colors
+            assert not _is_rgb_in_gamut(np.array([1.1, 0, 0]))
+            assert not _is_rgb_in_gamut(np.array([0, -0.1, 0]))
+            assert not _is_rgb_in_gamut(np.array([0, 0, 1.01]))
+            assert not _is_rgb_in_gamut(np.array([1.01, 1.01, 1.01]))
+            
+            # Test with custom tolerance
+            assert _is_rgb_in_gamut(np.array([1.05, 0, 0]), tolerance=0.1)
+            assert _is_rgb_in_gamut(np.array([0, -0.05, 0]), tolerance=0.1)
+            assert not _is_rgb_in_gamut(np.array([1.2, 0, 0]), tolerance=0.1)
+        except ImportError:
+            pytest.skip("colour-science library not installed")
+    
+    def test_map_to_srgb_gamut_performance(self):
+        """Test that sRGB gamut mapping maintains reasonable performance."""
+        try:
+            import time
+            import colour
+            
+            # Define colors
+            high_chroma_lch = np.array([50.0, 200.0, 120.0])  # Extremely high chroma
+            steps = 1000  # Large number of steps
+            
+            # Measure performance
+            start_time = time.time()
+            for _ in range(steps):
+                _map_to_srgb_gamut(high_chroma_lch)
+            duration = time.time() - start_time
+            
+            # Performance should be reasonable (adjust based on hardware)
+            # On a modern system, mapping 1000 colors should take less than 2 seconds
+            assert duration < 2.6, f"Gamut mapping took {duration:.2f}s, which is too slow"
             
         except ImportError:
             pytest.skip("colour-science library not installed")

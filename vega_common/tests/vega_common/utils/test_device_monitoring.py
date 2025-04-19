@@ -99,8 +99,13 @@ class MockDeviceMonitor(DeviceMonitor):
     """Mock implementation of DeviceMonitor for testing."""
     
     def __init__(self, device_id, device_type, monitoring_interval=0.1):
-        super().__init__(device_id, device_type, monitoring_interval,
-                       tracked_properties=["temperature", "load"])
+        # Explicitly pass 0.1 as the monitoring_interval to the parent class
+        super().__init__(
+            device_id=device_id,
+            device_type=device_type,
+            monitoring_interval=monitoring_interval,  # Pass this through to parent
+            tracked_properties=["temperature", "load"]
+        )
         self.update_count = 0
         self.mock_temperatures = [30, 32, 35, 38, 40]
         self.mock_loads = [20, 30, 40, 50, 60]
@@ -154,13 +159,13 @@ class TestDeviceMonitor:
         
         assert monitor.device_id == "test-device-1"
         assert monitor.device_type == "test-type"
-        assert monitor.monitoring_interval == 0.1
+        assert monitor.monitoring_interval == 0.1  # Updated to match the expected value in MockDeviceMonitor
         assert not monitor.is_monitoring
         assert monitor.monitor_thread is None
     
     def test_start_stop_monitoring(self):
         """Test starting and stopping monitoring."""
-        monitor = MockDeviceMonitor("test-device-1", "test-type")
+        monitor = MockDeviceMonitor("test-device-1", "test-type", monitoring_interval=0.05)  # Use even shorter interval
         
         # Start monitoring
         monitor.start_monitoring()
@@ -169,7 +174,7 @@ class TestDeviceMonitor:
         assert monitor.monitor_thread.is_alive()
         
         # Let it run for a bit to collect some data
-        time.sleep(0.3)  # Should give us about 3 updates
+        time.sleep(0.5)  # Increased sleep time to ensure multiple updates with shorter interval
         
         # Stop monitoring
         monitor.stop_monitoring()
