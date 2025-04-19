@@ -104,24 +104,35 @@ class NvidiaGpuMonitor(DeviceMonitor):
         device_id = f"nvidia_gpu_{device_index}"  # Default ID
         device_name = "Unknown NVIDIA GPU"
 
+        # First check if the device index is valid before doing anything else
         try:
-            # Validate device_index
             device_count = pynvml.nvmlDeviceGetCount()
             if not (0 <= device_index < device_count):
+                _shutdown_nvml_safe()  # Clean up before raising
+                logging.error(f"Invalid GPU index {device_index}: Found {device_count} devices.")
+                # This exception should not be caught by the later exception handlers
                 raise ValueError(f"Invalid device_index {device_index}. Found {device_count} devices.")
+        except pynvml.NVMLError as error:
+            # Only catch NVML errors here, not the ValueError we might have raised above
+            _shutdown_nvml_safe()
+            logging.error(f"Failed to get device count: {str(error)}")
+            raise NVMLError(f"Failed to get device count: {str(error)}") from error
 
+        # Only proceed to get handle if device index is valid
+        try:
             self.handle = pynvml.nvmlDeviceGetHandleByIndex(self.device_index)
             # Use PCI bus ID as a more stable device_id
             pci_info = pynvml.nvmlDeviceGetPciInfo(self.handle)
             # Format busId to be filesystem/URL safe if needed, but keep original for display
             device_id = pci_info.busId.decode('utf-8')  # busId is bytes
             device_name = pynvml.nvmlDeviceGetName(self.handle).decode('utf-8')
-
         except pynvml.NVMLError as error:
             _shutdown_nvml_safe()  # Decrement count if init succeeded but handle failed
             logging.error(f"Failed to get handle for GPU {device_index}: {str(error)}")
             raise NVMLError(f"Failed to get handle for GPU {device_index}: {str(error)}") from error
         except ValueError as error:
+            # This is now only needed for any other ValueError that might be raised elsewhere,
+            # since we're directly raising the device_index validation error above
             _shutdown_nvml_safe()  # Decrement count if init failed due to invalid index
             logging.error(f"Invalid GPU index {device_index}: {str(error)}")
             raise error  # Re-raise ValueError
@@ -136,7 +147,7 @@ class NvidiaGpuMonitor(DeviceMonitor):
                 "gpu_utilization", "memory_utilization"
             ]
         )
-        logging.info(f"Initialized monitor for {self.device_name} (ID: {self.device_id})")
+        logging.info(f"Initialized monitor for {device_name} (ID: {device_id})")
 
     def update_status(self):
         """
@@ -174,7 +185,8 @@ class NvidiaGpuMonitor(DeviceMonitor):
                         if hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and isinstance(e_fan1, pynvml.NVMLError) and e_fan1.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
                             logging.debug(f"Fan 0 speed not supported for {self.device_id}.")
                         else:
-                            raise e_fan1  # Re-raise other errors
+                            logging.warning(f"Failed to get fan 0 speed for {self.device_id}: {e_fan1}")
+                            # Don't set is_error yet, we'll handle that for both fans below
                 if num_fans >= 2:
                     try:
                         fan2 = pynvml.nvmlDeviceGetFanSpeed_v2(self.handle, 1)
@@ -182,8 +194,10 @@ class NvidiaGpuMonitor(DeviceMonitor):
                         if hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and isinstance(e_fan2, pynvml.NVMLError) and e_fan2.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
                             logging.debug(f"Fan 1 speed not supported for {self.device_id}.")
                         else:
-                            raise e_fan2  # Re-raise other errors
+                            logging.warning(f"Failed to get fan 1 speed for {self.device_id}: {e_fan2}")
+                            # Don't set is_error yet, we'll handle that for both fans below
 
+                # Update fan properties with appropriate error state
                 self.status.update_property("fan_speed_1", fan1)
                 self.status.update_property("fan_speed_2", fan2)
             except pynvml.NVMLError as e:
@@ -259,6 +273,8 @@ class NvidiaGpuController(DeviceController):
             # Validate device_index
             device_count = pynvml.nvmlDeviceGetCount()
             if not (0 <= device_index < device_count):
+                _shutdown_nvml_safe()  # Make sure to clean up before raising
+                logging.error(f"Invalid GPU index {device_index}: Found {device_count} devices.")
                 raise ValueError(f"Invalid device_index {device_index}. Found {device_count} devices.")
 
             self.handle = pynvml.nvmlDeviceGetHandleByIndex(self.device_index)
@@ -271,6 +287,8 @@ class NvidiaGpuController(DeviceController):
             logging.error(f"Failed to get handle for GPU controller {device_index}: {str(error)}")
             raise NVMLError(f"Failed to get handle for GPU controller {device_index}: {str(error)}") from error
         except ValueError as error:
+            # This is now only needed for any other ValueError that might be raised elsewhere,
+            # since we're directly raising the device_index validation error above
             _shutdown_nvml_safe()
             logging.error(f"Invalid GPU index {device_index}: {str(error)}")
             raise error
@@ -336,6 +354,85 @@ class NvidiaGpuController(DeviceController):
             success = False
 
         return success
+        
+    def apply_settings(self, settings: Dict[str, Any]) -> bool:
+        """
+        Apply specified settings to the GPU.
+
+        Args:
+            settings (Dict[str, Any]): Dictionary of settings to apply.
+                Supported keys:
+                - 'fan_speed': int or tuple of two ints for fan speed percentages
+                
+        Returns:
+            bool: True if all settings were applied successfully, False otherwise.
+            
+        Complexity: O(1) for each setting applied.
+        """
+        if self.handle is None:
+            logging.error(f"Cannot apply settings for {self.device_id}: NVML handle not available.")
+            return False
+            
+        success = True
+        applied_any = False
+        
+        if 'fan_speed' in settings:
+            fan_speed = settings['fan_speed']
+            if isinstance(fan_speed, (int, float)):
+                # Single value for both fans
+                fan_result = self.set_fan_speed(int(fan_speed))
+                success = success and fan_result
+                applied_any = True
+            elif isinstance(fan_speed, (list, tuple)) and len(fan_speed) >= 2:
+                # Different values for each fan
+                fan_result = self.set_fan_speed(int(fan_speed[0]), int(fan_speed[1]))
+                success = success and fan_result
+                applied_any = True
+            else:
+                logging.error(f"{self.device_id}: Invalid fan_speed format. Expected int or tuple of 2 ints.")
+                success = False
+                
+        # Add more settings handlers here as needed
+        
+        # Return False if no settings were recognized/applied
+        return success if applied_any else False
+
+    def get_available_settings(self) -> Dict[str, Any]:
+        """
+        Get available controllable settings and their current values.
+        
+        Returns:
+            Dict[str, Any]: Dictionary of available settings.
+            
+        Complexity: O(1) for NVML calls.
+        """
+        settings = {
+            "device_name": self.device_name,
+            "device_id": self.device_id,
+            "controllable_settings": ["fan_speed"]
+        }
+        
+        # Get current fan speeds if possible
+        if self.handle is not None:
+            try:
+                num_fans = pynvml.nvmlDeviceGetNumFans(self.handle)
+                fan_speeds = []
+                
+                for i in range(num_fans):
+                    try:
+                        speed = pynvml.nvmlDeviceGetFanSpeed_v2(self.handle, i)
+                        fan_speeds.append(speed)
+                    except pynvml.NVMLError:
+                        fan_speeds.append(None)
+                        
+                settings["current_fan_speeds"] = fan_speeds
+                settings["num_fans"] = num_fans
+            except pynvml.NVMLError as error:
+                logging.debug(f"Could not get fan information for {self.device_id}: {str(error)}")
+                settings["current_fan_speeds"] = []
+                settings["num_fans"] = 0
+                
+        return settings
 
     def cleanup(self):
         """Release NVML resources."""
