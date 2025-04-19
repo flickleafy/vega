@@ -12,7 +12,7 @@ from vega_common.utils.color_utils import (
     calculate_color_distance
 )
 from vega_common.utils.vectorized_color_utils import ( 
-    normalize_multiple_colors,normalize_multiple_colors, vectorized_rgb_to_hsv,
+    normalize_multiple_colors,vectorized_rgb_to_hsv,
     vectorized_hsv_to_rgb,
     batch_color_distance,
 )
@@ -58,7 +58,7 @@ class TestVectorizedColorOperations:
         assert normalized[0] == [100, 150, 200]  # Valid color unchanged
         assert normalized[1] == [100]            # Invalid color unchanged
         assert normalized[2] == [100, 150]       # Invalid color unchanged
-        assert normalized[3] == []               # Empty list unchanged
+        assert normalized[3] == []               # Invalid (empty) unchanged
         assert normalized[4][:3] == [100, 150, 200]  # First 3 values normalized
         
         # Test with empty list
@@ -84,7 +84,9 @@ class TestVectorizedColorOperations:
         for i in range(len(expected_hsv)):
             assert hsv_colors[i] == pytest.approx(expected_hsv[i], abs=0.5)
 
-        # Test with empty list input
+    def test_vectorized_rgb_to_hsv_empty_input(self):
+        """Test vectorized_rgb_to_hsv with empty input."""
+        # Explicitly test the empty list case to ensure coverage
         assert vectorized_rgb_to_hsv([]) == []
 
     def test_vectorized_rgb_to_hsv_invalid_input(self):
@@ -120,21 +122,27 @@ class TestVectorizedColorOperations:
         ]
         rgb_colors = vectorized_hsv_to_rgb(hsv_colors)
         assert rgb_colors == expected_rgb
+
+    def test_vectorized_hsv_to_rgb_empty_input(self):
+        """Test vectorized_hsv_to_rgb with empty input."""
+        # Explicitly test the empty list case to ensure coverage
+        assert vectorized_hsv_to_rgb([]) == []
         
-        # Test with invalid inputs
+    def test_vectorized_hsv_to_rgb_invalid_input(self):
+        """Test vectorized_hsv_to_rgb with invalid HSV values that trigger exception handling."""
+        # Invalid HSV colors that will trigger the exception handling
         hsv_colors = [
             [0, 100, 100],  # Valid
-            [120],          # Invalid (too short)
-            []              # Invalid (empty)
+            [120],          # Invalid (too short) - should trigger IndexError
+            []              # Invalid (empty) - should trigger IndexError
         ]
+        
+        # The function should handle exceptions and return [0,0,0] for invalid inputs
         rgb_colors = vectorized_hsv_to_rgb(hsv_colors)
         assert len(rgb_colors) == 3
         assert rgb_colors[0] == [255, 0, 0]  # Valid color converted
         assert rgb_colors[1] == [0, 0, 0]    # Invalid color returns default
         assert rgb_colors[2] == [0, 0, 0]    # Empty list returns default
-        
-        # Test with empty list
-        assert vectorized_hsv_to_rgb([]) == []
     
     def test_batch_color_distance(self):
         """Test batch_color_distance with various inputs."""
@@ -161,12 +169,28 @@ class TestVectorizedColorOperations:
         for i, color in enumerate(comparison_colors):
             individual_distance = calculate_color_distance(base_color, color)
             assert distances[i] == individual_distance
-        
-        # Test with invalid inputs
-        assert batch_color_distance([], comparison_colors) == []
-        assert batch_color_distance([100], comparison_colors) == []
+
+    def test_batch_color_distance_empty_colors(self):
+        """Test batch_color_distance with empty color list."""
+        # Test with valid base color but empty colors list
+        base_color = [100, 150, 200]
         assert batch_color_distance(base_color, []) == []
-    
+        
+    def test_batch_color_distance_invalid_base_color(self):
+        """Test batch_color_distance with invalid base color."""
+        # Test with invalid base color (too short)
+        comparison_colors = [[255, 0, 0], [0, 255, 0]]
+        
+        # Base color with fewer than 3 elements should return empty list
+        assert batch_color_distance([100], comparison_colors) == []
+        assert batch_color_distance([100, 150], comparison_colors) == []
+        assert batch_color_distance([], comparison_colors) == []
+        
+    def test_batch_color_distance_invalid_inputs(self):
+        """Test batch_color_distance with both empty colors and invalid base color."""
+        # Test both conditions that trigger the early return
+        assert batch_color_distance([100], []) == []  # Both invalid
+        assert batch_color_distance([], []) == []     # Both empty
     
     def test_performance_comparison(self, run_performance_tests):
         """Compare performance of vectorized operations vs. individual processing."""
