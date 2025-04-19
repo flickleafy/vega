@@ -49,6 +49,21 @@ from vega_common.utils.temperature_utils import (
     estimate_cpu_from_liquid_temp, calculate_safe_fan_speed,
     cpu_temp_to_fan_speed, gpu_temp_to_fan_speed
 )
+from vega_common.utils.hardware_rgb_profiles import (
+    aorus_x470_hue_fix,
+    asus_aura_brightness_correction,
+    corsair_icue_color_mapping,
+    msi_mystic_light_correction,
+    asrock_polychrome_correction,
+    nzxt_cam_correction,
+    apply_hardware_specific_correction,
+)
+
+from vega_common.utils.color_gradient_utils import (
+    create_color_gradient, create_color_gradient_cielch, create_rainbow_gradient,
+    create_temperature_gradient, get_temperature_color, temperature_to_color,
+    _map_to_srgb_gamut, _lch_to_rgb_norm, _is_rgb_in_gamut
+)
 # Import the new SlidingWindow class
 from vega_common.utils.sliding_window import SlidingWindow, NumericSlidingWindow
 # Import process utilities

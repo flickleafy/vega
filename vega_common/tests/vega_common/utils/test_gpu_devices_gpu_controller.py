@@ -26,6 +26,7 @@ def mock_pynvml():
         # Mock fan functions
         mock.nvmlDeviceGetNumFans = MagicMock(return_value=2)
         mock.nvmlDeviceSetFanSpeed_v2 = MagicMock()
+        mock.nvmlDeviceGetFanSpeed_v2 = MagicMock(side_effect=[60, 70])  # Default fan speeds
         
         # Define common NVML error constants
         mock.NVML_ERROR_NOT_SUPPORTED = 1
@@ -267,6 +268,239 @@ class TestNvidiaGpuController:
                 
                 # Assert
                 assert result is False
+
+    def test_apply_settings_int_fan_speed(self, mock_pynvml):
+        """Test applying settings with an integer fan speed (same for both fans)."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {'fan_speed': 75}
+        
+        # Patch set_fan_speed to track calls and return True
+        with patch.object(controller, 'set_fan_speed') as mock_set_fan_speed:
+            mock_set_fan_speed.return_value = True
+            
+            # Act
+            result = controller.apply_settings(settings)
+            
+            # Assert
+            assert result is True
+            mock_set_fan_speed.assert_called_once_with(75)
+
+    def test_apply_settings_tuple_fan_speed(self, mock_pynvml):
+        """Test applying settings with a tuple of fan speeds (different for each fan)."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {'fan_speed': (60, 80)}
+        
+        # Patch set_fan_speed to track calls and return True
+        with patch.object(controller, 'set_fan_speed') as mock_set_fan_speed:
+            mock_set_fan_speed.return_value = True
+            
+            # Act
+            result = controller.apply_settings(settings)
+            
+            # Assert
+            assert result is True
+            mock_set_fan_speed.assert_called_once_with(60, 80)
+
+    def test_apply_settings_list_fan_speed(self, mock_pynvml):
+        """Test applying settings with a list of fan speeds (different for each fan)."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {'fan_speed': [40, 90]}
+        
+        # Patch set_fan_speed to track calls and return True
+        with patch.object(controller, 'set_fan_speed') as mock_set_fan_speed:
+            mock_set_fan_speed.return_value = True
+            
+            # Act
+            result = controller.apply_settings(settings)
+            
+            # Assert
+            assert result is True
+            mock_set_fan_speed.assert_called_once_with(40, 90)
+
+    def test_apply_settings_float_fan_speed(self, mock_pynvml):
+        """Test applying settings with a float fan speed (should convert to int)."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {'fan_speed': 50.5}
+        
+        # Patch set_fan_speed to track calls and return True
+        with patch.object(controller, 'set_fan_speed') as mock_set_fan_speed:
+            mock_set_fan_speed.return_value = True
+            
+            # Act
+            result = controller.apply_settings(settings)
+            
+            # Assert
+            assert result is True
+            mock_set_fan_speed.assert_called_once_with(50)  # Should be converted to int
+
+    def test_apply_settings_invalid_fan_speed_format(self, mock_pynvml):
+        """Test applying settings with an invalid fan speed format."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {'fan_speed': "50%"}  # String is invalid format
+        
+        # Patch set_fan_speed to ensure it's not called
+        with patch.object(controller, 'set_fan_speed') as mock_set_fan_speed:
+            # Act
+            result = controller.apply_settings(settings)
+            
+            # Assert
+            assert result is False
+            mock_set_fan_speed.assert_not_called()
+
+    def test_apply_settings_empty_tuple_fan_speed(self, mock_pynvml):
+        """Test applying settings with an empty tuple fan speed (invalid format)."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {'fan_speed': ()}  # Empty tuple is invalid
+        
+        # Patch set_fan_speed to ensure it's not called
+        with patch.object(controller, 'set_fan_speed') as mock_set_fan_speed:
+            # Act
+            result = controller.apply_settings(settings)
+            
+            # Assert
+            assert result is False
+            mock_set_fan_speed.assert_not_called()
+
+    def test_apply_settings_single_value_tuple(self, mock_pynvml):
+        """Test applying settings with a single-value tuple (invalid format for two fans)."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {'fan_speed': (50,)}  # Single value tuple is invalid for the method
+        
+        # Patch set_fan_speed to ensure it's not called with tuple
+        with patch.object(controller, 'set_fan_speed') as mock_set_fan_speed:
+            # Act
+            result = controller.apply_settings(settings)
+            
+            # Assert
+            assert result is False
+            mock_set_fan_speed.assert_not_called()
+
+    def test_apply_settings_failure(self, mock_pynvml):
+        """Test applying settings when set_fan_speed fails."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {'fan_speed': 50}
+        
+        # Patch set_fan_speed to return False (failure)
+        with patch.object(controller, 'set_fan_speed') as mock_set_fan_speed:
+            mock_set_fan_speed.return_value = False
+            
+            # Act
+            result = controller.apply_settings(settings)
+            
+            # Assert
+            assert result is False
+            mock_set_fan_speed.assert_called_once_with(50)
+
+    def test_apply_settings_no_recognized_settings(self, mock_pynvml):
+        """Test applying settings with no recognized settings."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {'unknown_setting': 'value'}
+        
+        # Act
+        result = controller.apply_settings(settings)
+        
+        # Assert
+        assert result is False  # Should return False if no settings were recognized
+
+    def test_apply_settings_empty_dict(self, mock_pynvml):
+        """Test applying settings with an empty dictionary."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        settings = {}
+        
+        # Act
+        result = controller.apply_settings(settings)
+        
+        # Assert
+        assert result is False  # Should return False if no settings were provided
+
+    def test_apply_settings_no_handle(self):
+        """Test applying settings when handle is None."""
+        # Arrange - create a controller instance without going through the normal initialization
+        with patch('vega_common.utils.gpu_devices.pynvml'):
+            with patch('vega_common.utils.gpu_devices._initialize_nvml_safe'):
+                # Create a controller and manually set handle to None
+                controller = NvidiaGpuController.__new__(NvidiaGpuController)
+                controller.device_id = "test_gpu"
+                controller.device_name = "Test GPU"
+                controller.handle = None
+                
+                # Act
+                result = controller.apply_settings({'fan_speed': 50})
+                
+                # Assert
+                assert result is False
+
+    def test_get_available_settings_success(self, mock_pynvml):
+        """Test getting available settings successfully."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        
+        # Act
+        settings = controller.get_available_settings()
+        
+        # Assert
+        assert settings['device_name'] == "NVIDIA GeForce RTX 3080"
+        assert settings['device_id'] == "0000:01:00.0"
+        assert "fan_speed" in settings['controllable_settings']
+        assert settings['current_fan_speeds'] == [60, 70]  # From the mock setup
+        assert settings['num_fans'] == 2
+
+    def test_get_available_settings_no_fans(self, mock_pynvml):
+        """Test getting available settings when no fans are present."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        mock_pynvml.nvmlDeviceGetNumFans.return_value = 0
+        
+        # Act
+        settings = controller.get_available_settings()
+        
+        # Assert
+        assert settings['current_fan_speeds'] == []
+        assert settings['num_fans'] == 0
+
+    def test_get_available_settings_nvml_error(self, mock_pynvml):
+        """Test getting available settings when NVML raises an error."""
+        # Arrange
+        controller = NvidiaGpuController(0)
+        mock_pynvml.nvmlDeviceGetNumFans.side_effect = mock_pynvml.NVMLError("NVML Error")
+        
+        # Act
+        settings = controller.get_available_settings()
+        
+        # Assert
+        assert settings['current_fan_speeds'] == []
+        assert settings['num_fans'] == 0
+
+    def test_get_available_settings_no_handle(self):
+        """Test getting available settings when handle is None."""
+        # Arrange - create a controller instance without going through the normal initialization
+        with patch('vega_common.utils.gpu_devices.pynvml'):
+            with patch('vega_common.utils.gpu_devices._initialize_nvml_safe'):
+                # Create a controller and manually set handle to None
+                controller = NvidiaGpuController.__new__(NvidiaGpuController)
+                controller.device_id = "test_gpu"
+                controller.device_name = "Test GPU"
+                controller.handle = None
+                
+                # Act
+                settings = controller.get_available_settings()
+                
+                # Assert
+                assert settings['device_name'] == "Test GPU"
+                assert settings['device_id'] == "test_gpu"
+                assert "fan_speed" in settings['controllable_settings']
+                assert 'current_fan_speeds' not in settings  # Should not be present when handle is None
+                assert 'num_fans' not in settings
 
     def test_cleanup(self, mock_pynvml, mock_shutdown_nvml):
         """Test cleanup method."""

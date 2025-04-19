@@ -35,9 +35,13 @@ def _initialize_nvml_safe():
             try:
                 pynvml.nvmlInit()
                 logging.debug("NVML initialized.")
-            except pynvml.NVMLError as error:
-                logging.error(f"Failed to initialize NVML: {str(error)}")
-                raise NVMLError(f"Failed to initialize NVML: {str(error)}") from error  # Raise custom error
+            except Exception as error:
+                if hasattr(pynvml, 'NVMLError') and isinstance(error, pynvml.NVMLError):
+                    logging.error(f"Failed to initialize NVML: {str(error)}")
+                    raise NVMLError(f"Failed to initialize NVML: {str(error)}") from error
+                else:
+                    logging.error(f"Unexpected error initializing NVML: {str(error)}")
+                    raise NVMLError(f"Failed to initialize NVML: {str(error)}") from error
         _nvml_init_count += 1
 
 
@@ -53,7 +57,7 @@ def _shutdown_nvml_safe():
             try:
                 pynvml.nvmlShutdown()
                 logging.debug("NVML shut down.")
-            except pynvml.NVMLError as error:
+            except Exception as error:
                 # Log error but don't raise, as shutdown failure is less critical
                 logging.error(f"Failed to shut down NVML: {str(error)}")
 
@@ -112,30 +116,41 @@ class NvidiaGpuMonitor(DeviceMonitor):
                 logging.error(f"Invalid GPU index {device_index}: Found {device_count} devices.")
                 # This exception should not be caught by the later exception handlers
                 raise ValueError(f"Invalid device_index {device_index}. Found {device_count} devices.")
-        except pynvml.NVMLError as error:
+        except Exception as error:
             # Only catch NVML errors here, not the ValueError we might have raised above
-            _shutdown_nvml_safe()
-            logging.error(f"Failed to get device count: {str(error)}")
-            raise NVMLError(f"Failed to get device count: {str(error)}") from error
+            if not isinstance(error, ValueError):
+                _shutdown_nvml_safe()
+                logging.error(f"Failed to get device count: {str(error)}")
+                raise NVMLError(f"Failed to get device count: {str(error)}") from error
+            raise  # Re-raise ValueError
 
         # Only proceed to get handle if device index is valid
         try:
             self.handle = pynvml.nvmlDeviceGetHandleByIndex(self.device_index)
-            # Use PCI bus ID as a more stable device_id
-            pci_info = pynvml.nvmlDeviceGetPciInfo(self.handle)
-            # Format busId to be filesystem/URL safe if needed, but keep original for display
-            device_id = pci_info.busId.decode('utf-8')  # busId is bytes
-            device_name = pynvml.nvmlDeviceGetName(self.handle).decode('utf-8')
-        except pynvml.NVMLError as error:
+            
+            # Try to get PCI bus ID if available - handle gracefully if not
+            try:
+                pci_info = pynvml.nvmlDeviceGetPciInfo(self.handle)
+                # Format busId to be filesystem/URL safe if needed, but keep original for display
+                if hasattr(pci_info, 'busId'):
+                    device_id = pci_info.busId.decode('utf-8')  # busId is bytes
+            except Exception as pci_error:
+                logging.warning(f"Failed to get PCI info for GPU {device_index}: {str(pci_error)}. Using default device ID.")
+                # Continue with default device_id
+                
+            # Try to get device name if available - handle gracefully if not
+            try:
+                name_bytes = pynvml.nvmlDeviceGetName(self.handle)
+                if name_bytes is not None:  # Check if name is available
+                    device_name = name_bytes.decode('utf-8')
+            except Exception as name_error:
+                logging.warning(f"Failed to get device name for GPU {device_index}: {str(name_error)}. Using default name.")
+                # Continue with default device_name
+                
+        except Exception as error:
             _shutdown_nvml_safe()  # Decrement count if init succeeded but handle failed
             logging.error(f"Failed to get handle for GPU {device_index}: {str(error)}")
             raise NVMLError(f"Failed to get handle for GPU {device_index}: {str(error)}") from error
-        except ValueError as error:
-            # This is now only needed for any other ValueError that might be raised elsewhere,
-            # since we're directly raising the device_index validation error above
-            _shutdown_nvml_safe()  # Decrement count if init failed due to invalid index
-            logging.error(f"Invalid GPU index {device_index}: {str(error)}")
-            raise error  # Re-raise ValueError
 
         super().__init__(
             device_id=device_id,
@@ -164,13 +179,18 @@ class NvidiaGpuMonitor(DeviceMonitor):
             try:
                 temp = pynvml.nvmlDeviceGetTemperature(self.handle, pynvml.NVML_TEMPERATURE_GPU)
                 self.status.update_property("temperature", temp)
-            except pynvml.NVMLError as e:
+            except Exception as e:
                 # Check if the error is 'NOT_SUPPORTED'
-                if hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and isinstance(e, pynvml.NVMLError) and e.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
+                if hasattr(pynvml, 'NVMLError') and isinstance(e, pynvml.NVMLError) and hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and e.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
                     logging.debug(f"Temperature sensor not supported for {self.device_id}.")
                     self.status.update_property("temperature", None, is_error=False)  # Mark as None, not error
-                else:
+                elif isinstance(e, pynvml.NVMLError):
+                    # NVML specific errors can be warnings
                     logging.warning(f"Could not get temperature for {self.device_id}: {e}")
+                    self.status.update_property("temperature", None, is_error=True)
+                else:
+                    # General exceptions (like RuntimeError) should be logged as errors
+                    logging.error(f"Unexpected error getting temperature for {self.device_id}: {e}")
                     self.status.update_property("temperature", None, is_error=True)
 
             # --- Fan Speed ---
@@ -178,30 +198,62 @@ class NvidiaGpuMonitor(DeviceMonitor):
                 num_fans = pynvml.nvmlDeviceGetNumFans(self.handle)
                 fan1 = None
                 fan2 = None
-                if num_fans >= 1:
-                    try:
-                        fan1 = pynvml.nvmlDeviceGetFanSpeed_v2(self.handle, 0)
-                    except pynvml.NVMLError as e_fan1:
-                        if hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and isinstance(e_fan1, pynvml.NVMLError) and e_fan1.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
-                            logging.debug(f"Fan 0 speed not supported for {self.device_id}.")
+                
+                # If the GPU has no fans at all, mark both fan speeds as None but not errors
+                if num_fans == 0:
+                    logging.debug(f"No fans detected for {self.device_id}.")
+                    self.status.update_property("fan_speed_1", None, is_error=False)
+                    self.status.update_property("fan_speed_2", None, is_error=False)
+                else:
+                    # GPU has at least one fan
+                    if num_fans >= 1:
+                        try:
+                            fan1 = pynvml.nvmlDeviceGetFanSpeed_v2(self.handle, 0)
+                        except Exception as e_fan1:
+                            if hasattr(pynvml, 'NVMLError') and isinstance(e_fan1, pynvml.NVMLError) and hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and e_fan1.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
+                                logging.debug(f"Fan 0 speed not supported for {self.device_id}.")
+                                # Explicitly mark as not an error when feature is not supported
+                                self.status.update_property("fan_speed_1", None, is_error=False)
+                            elif isinstance(e_fan1, pynvml.NVMLError):
+                                logging.warning(f"Failed to get fan 0 speed for {self.device_id}: {e_fan1}")
+                                self.status.update_property("fan_speed_1", None, is_error=True)
+                            else:
+                                logging.error(f"Unexpected error getting fan 0 speed for {self.device_id}: {e_fan1}")
+                                self.status.update_property("fan_speed_1", None, is_error=True)
                         else:
-                            logging.warning(f"Failed to get fan 0 speed for {self.device_id}: {e_fan1}")
-                            # Don't set is_error yet, we'll handle that for both fans below
-                if num_fans >= 2:
-                    try:
-                        fan2 = pynvml.nvmlDeviceGetFanSpeed_v2(self.handle, 1)
-                    except pynvml.NVMLError as e_fan2:
-                        if hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and isinstance(e_fan2, pynvml.NVMLError) and e_fan2.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
-                            logging.debug(f"Fan 1 speed not supported for {self.device_id}.")
+                            # Update fan property if no exception occurred
+                            self.status.update_property("fan_speed_1", fan1)
+                            
+                    if num_fans >= 2:
+                        try:
+                            fan2 = pynvml.nvmlDeviceGetFanSpeed_v2(self.handle, 1)
+                        except Exception as e_fan2:
+                            if hasattr(pynvml, 'NVMLError') and isinstance(e_fan2, pynvml.NVMLError) and hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and e_fan2.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
+                                logging.debug(f"Fan 1 speed not supported for {self.device_id}.")
+                                # Explicitly mark as not an error when feature is not supported
+                                self.status.update_property("fan_speed_2", None, is_error=False)
+                            elif isinstance(e_fan2, pynvml.NVMLError):
+                                logging.warning(f"Failed to get fan 1 speed for {self.device_id}: {e_fan2}")
+                                self.status.update_property("fan_speed_2", None, is_error=True)
+                            else:
+                                logging.error(f"Unexpected error getting fan 1 speed for {self.device_id}: {e_fan2}")
+                                self.status.update_property("fan_speed_2", None, is_error=True)
                         else:
-                            logging.warning(f"Failed to get fan 1 speed for {self.device_id}: {e_fan2}")
-                            # Don't set is_error yet, we'll handle that for both fans below
-
-                # Update fan properties with appropriate error state
-                self.status.update_property("fan_speed_1", fan1)
-                self.status.update_property("fan_speed_2", fan2)
-            except pynvml.NVMLError as e:
-                logging.warning(f"Could not get fan speed for {self.device_id}: {e}")
+                            # Update fan property if no exception occurred
+                            self.status.update_property("fan_speed_2", fan2)
+                    else:
+                        # If we have fewer than 2 fans, mark fan_speed_2 as None but not an error
+                        self.status.update_property("fan_speed_2", None, is_error=False)
+                    
+                    # Handle fan_speed_1 if no fans at all (this case shouldn't actually happen with the new structure)
+                    if num_fans < 1:
+                        self.status.update_property("fan_speed_1", None, is_error=False)
+                    
+            except Exception as e:
+                if isinstance(e, pynvml.NVMLError):
+                    logging.warning(f"Could not get fan speed for {self.device_id}: {e}")
+                else:
+                    logging.error(f"Unexpected error getting fan speed for {self.device_id}: {e}")
                 self.status.update_property("fan_speed_1", None, is_error=True)
                 self.status.update_property("fan_speed_2", None, is_error=True)
 
@@ -210,20 +262,24 @@ class NvidiaGpuMonitor(DeviceMonitor):
                 util = pynvml.nvmlDeviceGetUtilizationRates(self.handle)
                 self.status.update_property("gpu_utilization", util.gpu)
                 self.status.update_property("memory_utilization", util.memory)
-            except pynvml.NVMLError as e:
-                if hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and isinstance(e, pynvml.NVMLError) and e.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
+            except Exception as e:
+                if hasattr(pynvml, 'NVMLError') and isinstance(e, pynvml.NVMLError) and hasattr(pynvml, 'NVML_ERROR_NOT_SUPPORTED') and e.args[0] == pynvml.NVML_ERROR_NOT_SUPPORTED:
                     logging.debug(f"Utilization rates not supported for {self.device_id}.")
                     self.status.update_property("gpu_utilization", None, is_error=False)
                     self.status.update_property("memory_utilization", None, is_error=False)
-                else:
+                elif isinstance(e, pynvml.NVMLError):
                     logging.warning(f"Could not get utilization for {self.device_id}: {e}")
+                    self.status.update_property("gpu_utilization", None, is_error=True)
+                    self.status.update_property("memory_utilization", None, is_error=True)
+                else:
+                    logging.error(f"Unexpected error getting utilization for {self.device_id}: {e}")
                     self.status.update_property("gpu_utilization", None, is_error=True)
                     self.status.update_property("memory_utilization", None, is_error=True)
 
             # Mark status as updated successfully
             self.status.mark_updated()
 
-        except pynvml.NVMLError as e:
+        except Exception as e:
             logging.error(f"NVML error during update for {self.device_id}: {e}")
             # Mark all properties as error state if a general NVML error occurs
             for prop in self.tracked_properties:
@@ -442,69 +498,69 @@ class NvidiaGpuController(DeviceController):
 
 
 # Example usage (for testing purposes, would normally be used by DeviceManager)
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    monitors: List[NvidiaGpuMonitor] = []
-    controllers: List[NvidiaGpuController] = []
-    gpu_count = 0
-    try:
-        _initialize_nvml_safe()  # Initial check
-        gpu_count = pynvml.nvmlDeviceGetCount()
-        _shutdown_nvml_safe()  # Close initial check
-        print(f"Found {gpu_count} NVIDIA GPUs.")
+# if __name__ == "__main__":
+#     logging.basicConfig(level=logging.DEBUG)
+#     monitors: List[NvidiaGpuMonitor] = []
+#     controllers: List[NvidiaGpuController] = []
+#     gpu_count = 0
+#     try:
+#         _initialize_nvml_safe()  # Initial check
+#         gpu_count = pynvml.nvmlDeviceGetCount()
+#         _shutdown_nvml_safe()  # Close initial check
+#         print(f"Found {gpu_count} NVIDIA GPUs.")
 
-    except NVMLError as e:
-        print(f"NVML Error during detection: {e}")
-        gpu_count = 0  # Ensure count is 0 if detection fails
+#     except NVMLError as e:
+#         print(f"NVML Error during detection: {e}")
+#         gpu_count = 0  # Ensure count is 0 if detection fails
 
-    if gpu_count > 0:
-        for i in range(gpu_count):
-            try:
-                monitor = NvidiaGpuMonitor(device_index=i, monitoring_interval=1.0)
-                monitors.append(monitor)
-                controller = NvidiaGpuController(device_index=i)
-                controllers.append(controller)
-            except (NVMLError, ValueError) as e:
-                print(f"Could not initialize monitor/controller for GPU {i}: {e}")
+#     if gpu_count > 0:
+#         for i in range(gpu_count):
+#             try:
+#                 monitor = NvidiaGpuMonitor(device_index=i, monitoring_interval=1.0)
+#                 monitors.append(monitor)
+#                 controller = NvidiaGpuController(device_index=i)
+#                 controllers.append(controller)
+#             except (NVMLError, ValueError) as e:
+#                 print(f"Could not initialize monitor/controller for GPU {i}: {e}")
 
-        if monitors:
-            print("\n--- Monitoring (Example: First GPU) ---")
-            try:
-                monitors[0].update_status()
-                status_dict = monitors[0].status.get_all_properties()
-                print(f"GPU {monitors[0].device_id} Status:")
-                for key, value in status_dict.items():
-                    print(f"  {key}: {value}")
+#         if monitors:
+#             print("\n--- Monitoring (Example: First GPU) ---")
+#             try:
+#                 monitors[0].update_status()
+#                 status_dict = monitors[0].status.get_all_properties()
+#                 print(f"GPU {monitors[0].device_id} Status:")
+#                 for key, value in status_dict.items():
+#                     print(f"  {key}: {value}")
 
-            except Exception as e:
-                print(f"Error during monitoring example: {e}")
+#             except Exception as e:
+#                 print(f"Error during monitoring example: {e}")
 
-        if controllers:
-            print("\n--- Controlling (Example: First GPU) ---")
-            try:
-                print("Attempting to set fan speed to 50% for GPU 0 (Fan 0 and 1)")
-                success = controllers[0].set_fan_speed(50)
-                print(f"Set fan speed success: {success}")
-            except Exception as e:
-                print(f"Error during control example: {e}")
+#         if controllers:
+#             print("\n--- Controlling (Example: First GPU) ---")
+#             try:
+#                 print("Attempting to set fan speed to 50% for GPU 0 (Fan 0 and 1)")
+#                 success = controllers[0].set_fan_speed(50)
+#                 print(f"Set fan speed success: {success}")
+#             except Exception as e:
+#                 print(f"Error during control example: {e}")
 
-    else:
-        print("No NVIDIA GPUs found or NVML unavailable.")
+#     else:
+#         print("No NVIDIA GPUs found or NVML unavailable.")
 
-    print("\n--- Cleanup ---")
-    for monitor in monitors:
-        try:
-            monitor.cleanup()
-        except Exception as e:
-            print(f"Error cleaning up monitor {monitor.device_id}: {e}")
-    for controller in controllers:
-        try:
-            controller.cleanup()
-        except Exception as e:
-            print(f"Error cleaning up controller {controller.device_id}: {e}")
+#     print("\n--- Cleanup ---")
+#     for monitor in monitors:
+#         try:
+#             monitor.cleanup()
+#         except Exception as e:
+#             print(f"Error cleaning up monitor {monitor.device_id}: {e}")
+#     for controller in controllers:
+#         try:
+#             controller.cleanup()
+#         except Exception as e:
+#             print(f"Error cleaning up controller {controller.device_id}: {e}")
 
-    try:
-        _shutdown_nvml_safe()
-        print(f"Final NVML init count (should be 0): {_nvml_init_count}")
-    except Exception as e:
-        print(f"Error during final NVML shutdown check: {e}")
+#     try:
+#         _shutdown_nvml_safe()
+#         print(f"Final NVML init count (should be 0): {_nvml_init_count}")
+#     except Exception as e:
+#         print(f"Error during final NVML shutdown check: {e}")
