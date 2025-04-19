@@ -322,3 +322,190 @@ class TestCpuMonitor:
         assert not cpu_monitor.status.has_error("temperature")
         assert abs(cpu_monitor.get_cpu_temperature() - 55.0) < 1e-6
 
+    def test_cleanup_method(self, cpu_monitor):
+        """Test the cleanup method is called without errors."""
+        # Simply verify that cleanup runs without exceptions
+        cpu_monitor.cleanup()
+        # No assertions needed - just checking for no exceptions
+        
+    def test_empty_sensors_in_device(self, mock_psutil):
+        """Test handling a device with an empty sensor list."""
+        mock_psutil.sensors_temperatures.return_value = {'coretemp': []}
+        
+        monitor = CpuMonitor(device_id="empty_sensors_cpu")
+        monitor.update_status()
+        
+        # Should handle empty sensors gracefully
+        assert monitor.get_cpu_temperature() is None
+        assert monitor.status.has_error("temperature")
+        
+    def test_generic_temp_label_fallback(self, mock_psutil):
+        """Test fallback to generic temperature labels like 'temp1'."""
+        # Create mock with only generic temperature labels
+        mock_data = {
+            'acpitz': [
+                psutil._common.shwtemp(label='temp1', current=45.0, high=95.0, critical=105.0),
+                psutil._common.shwtemp(label='temp2', current=47.0, high=95.0, critical=105.0),
+            ]
+        }
+        mock_psutil.sensors_temperatures.return_value = mock_data
+        
+        monitor = CpuMonitor(device_id="generic_temp_cpu")
+        monitor.update_status()
+        
+        # Should find the generic temperature
+        assert abs(monitor.get_cpu_temperature() - 45.0) < 1e-6
+        
+    def test_temperature_history_tracking(self, cpu_monitor, mock_psutil):
+        """Test that temperature history is properly tracked."""
+        # Register temperature tracking property if not already done
+        if "temperature" not in cpu_monitor.status.status_history:
+            cpu_monitor.status.register_tracked_property("temperature", default_value=0.0)
+        
+        # Update with different temperatures
+        mock_psutil.sensors_temperatures.return_value = MOCK_TEMPS_CORETEMP
+        cpu_monitor.update_status()  # First update: 55.0
+        
+        # Change the temperature for next update
+        new_data = {
+            'coretemp': [
+                psutil._common.shwtemp(label='Package id 0', current=57.0, high=85.0, critical=100.0),
+            ]
+        }
+        mock_psutil.sensors_temperatures.return_value = new_data
+        cpu_monitor.update_status()  # Second update: 57.0
+        
+        # Check history
+        history = cpu_monitor.status.get_property_history("temperature")
+        assert len(history) > 0
+        assert 55.0 in history
+        assert 57.0 in history
+        
+    def test_extreme_temperature_values(self, mock_psutil):
+        """Test handling of extreme temperature values."""
+        # Test with very high temperature
+        mock_high = {
+            'coretemp': [
+                psutil._common.shwtemp(label='Package id 0', current=999.0, high=None, critical=None),
+            ]
+        }
+        mock_psutil.sensors_temperatures.return_value = mock_high
+        
+        monitor = CpuMonitor(device_id="extreme_temp_cpu")
+        monitor.update_status()
+        assert abs(monitor.get_cpu_temperature() - 999.0) < 1e-6
+        
+        # Test with very low temperature
+        mock_low = {
+            'coretemp': [
+                psutil._common.shwtemp(label='Package id 0', current=-50.0, high=None, critical=None),
+            ]
+        }
+        mock_psutil.sensors_temperatures.return_value = mock_low
+        monitor.update_status()
+        assert abs(monitor.get_cpu_temperature() - (-50.0)) < 1e-6
+        
+        # Test with zero temperature
+        mock_zero = {
+            'coretemp': [
+                psutil._common.shwtemp(label='Package id 0', current=0.0, high=None, critical=None),
+            ]
+        }
+        mock_psutil.sensors_temperatures.return_value = mock_zero
+        monitor.update_status()
+        assert abs(monitor.get_cpu_temperature() - 0.0) < 1e-6
+        
+    def test_sensors_with_no_high_critical(self, mock_psutil):
+        """Test sensors that don't have high or critical values."""
+        mock_data = {
+            'k10temp': [
+                psutil._common.shwtemp(label='Tdie', current=65.5, high=None, critical=None),
+            ]
+        }
+        mock_psutil.sensors_temperatures.return_value = mock_data
+        
+        monitor = CpuMonitor(device_id="no_high_critical_cpu")
+        monitor.update_status()
+        
+        # Should handle missing high/critical values gracefully
+        assert abs(monitor.get_cpu_temperature() - 65.5) < 1e-6
+        
+    def test_sorting_by_label_priority(self, mock_psutil):
+        """Test that sensors are sorted by label priority correctly."""
+        # Create a mock with multiple sensors in non-priority order
+        mock_data = {
+            'k10temp': [
+                psutil._common.shwtemp(label='Tccd1', current=62.0, high=None, critical=None),
+                psutil._common.shwtemp(label='Tctl', current=63.0, high=None, critical=None),
+                psutil._common.shwtemp(label='Tdie', current=61.0, high=None, critical=None),
+            ]
+        }
+        mock_psutil.sensors_temperatures.return_value = mock_data
+        
+        # Create monitor with specific priority order
+        monitor = CpuMonitor(
+            device_id="sort_priority_cpu",
+            cpu_temp_sensor_labels=["tdie", "tctl", "tccd1"]
+        )
+        monitor.update_status()
+        
+        # Should select Tdie based on priority, even though it's not first in the list
+        assert abs(monitor.get_cpu_temperature() - 61.0) < 1e-6
+        
+    def test_init_count_safety(self, mock_psutil):
+        """Test the safety of initialization and cleanup."""
+        # Simulate multiple monitors starting and stopping
+        monitor1 = CpuMonitor(device_id="cpu1")
+        monitor2 = CpuMonitor(device_id="cpu2")
+        
+        # Both monitors should initialize successfully
+        assert monitor1.device_id == "cpu1"
+        assert monitor2.device_id == "cpu2"
+        
+        # Both should cleanup without errors
+        monitor1.cleanup()
+        monitor2.cleanup()
+        
+        # Create another one after cleanup to ensure init works again
+        monitor3 = CpuMonitor(device_id="cpu3")
+        assert monitor3.device_id == "cpu3"
+        monitor3.cleanup()
+        
+    def test_has_sensors_temperatures_attribute_check(self, cpu_monitor, mock_psutil):
+        """Test the check for the presence of sensors_temperatures attribute."""
+        # Test with attribute present but raising exception
+        mock_psutil.sensors_temperatures.side_effect = AttributeError("Test Exception")
+        
+        cpu_monitor.update_status()
+        
+        # Should handle missing attribute gracefully
+        assert cpu_monitor.get_cpu_temperature() is None
+        assert cpu_monitor.status.has_error("temperature")
+        
+        # Simulate sensors_temperatures not existing
+        if hasattr(mock_psutil, 'sensors_temperatures'):
+            delattr(mock_psutil, 'sensors_temperatures')
+            
+        # Create a new monitor in this state
+        monitor = CpuMonitor(device_id="no_sensors_temp_cpu")
+        assert monitor.status.has_error("initialization")
+        
+    def test_non_preferred_device_only(self, mock_psutil):
+        """Test when only non-preferred devices are available."""
+        mock_data = {
+            'unknown_device': [
+                psutil._common.shwtemp(label='temp1', current=48.0, high=None, critical=None),
+            ]
+        }
+        mock_psutil.sensors_temperatures.return_value = mock_data
+        
+        # Create monitor with custom device preference that doesn't include the available device
+        monitor = CpuMonitor(
+            device_id="non_preferred_device_cpu",
+            cpu_temp_device_names=["k10temp", "coretemp"]
+        )
+        monitor.update_status()
+        
+        # Should not find a temperature because device isn't in preferred list
+        assert monitor.get_cpu_temperature() is None
+
