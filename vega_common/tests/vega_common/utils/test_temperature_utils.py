@@ -203,7 +203,8 @@ class TestFanSpeedCalculation:
         # Test other points within the range
         # For temps in range 30-75, speed should scale linearly from 20-100
         # Temp 40 is (40-30)/(75-30) = 10/45 = 2/9 = 0.222... of the way
-        # Expected speed = 20 + (100 - 20) * (10/45) = 20 + 80 * (2/9) = 20 + 160/9 = 20 + 17.77... = 37.77... -> rounded to 38
+        # Expected speed = 20 + (100 - 20) * (10/45) = 20 + 80 * (2/9) = 20 +
+        # 160/9 = 20 + 17.77... = 37.77... -> rounded to 38
         assert calculate_safe_fan_speed(40) == 38
         # Temp 60 is (60-30)/(75-30) = 30/45 = 2/3 = 0.666... of the way
         # Expected speed = 20 + 80 * (2/3) = 20 + 160/3 = 20 + 53.33... = 73.33... -> rounded to 73
@@ -262,7 +263,8 @@ class TestFanSpeedCalculation:
         assert calculate_safe_fan_speed(60, 30, 75, 50, 50) == 50
 
         # Test with floating point temps
-        # Expected: 20 + ((45.5-30)/(75-30)) * 80 = 20 + (15.5/45) * 80 = 20 + 0.3444 * 80 = 20 + 27.555... = 47.555... -> rounded to 48
+        # Expected: 20 + ((45.5-30)/(75-30)) * 80 = 20 + (15.5/45) * 80 = 20 +
+        # 0.3444 * 80 = 20 + 27.555... = 47.555... -> rounded to 48
         assert calculate_safe_fan_speed(45.5) == 48
 
     def test_calculate_safe_fan_speed(self):
@@ -315,7 +317,8 @@ class TestFanSpeedCalculation:
         # - After swapping: temp=60, min_temp=30, max_temp=75, min_speed=100, max_speed=20
         # - Calculation:
         #   normalized = (60 - 30) / (75 - 30) = 30 / 45 = 2/3
-        #   speed = 100 + (2/3) * (20 - 100) = 100 - (2/3) * 80 = 100 - 53.33 = 46.67 -> rounded to 47
+        # speed = 100 + (2/3) * (20 - 100) = 100 - (2/3) * 80 = 100 - 53.33 =
+        # 46.67 -> rounded to 47
         assert (
             calculate_safe_fan_speed(60, min_temp=75, max_temp=30, min_speed=20, max_speed=100)
             == 47
@@ -375,7 +378,8 @@ class TestFanSpeedCalculation:
 
         # Test at the 0% threshold
         # At temp=33.33..., speed should be just below 0: (6 * 33.33) - 200 = 199.98 - 200 = -0.02 -> round(0) -> 0
-        # At temp=33.5, speed should be just above 0: (6 * 33.5) - 200 = 201 - 200 = 1 -> round(1) -> 1
+        # At temp=33.5, speed should be just above 0: (6 * 33.5) - 200 = 201 - 200
+        # = 1 -> round(1) -> 1
         assert cpu_temp_to_fan_speed(33.33) == 0
         assert cpu_temp_to_fan_speed(33.5) == 1  # Crossing point
 
@@ -572,7 +576,8 @@ class TestTemperatureUtilsPytest:
         # - After swapping: temp=60, min_temp=30, max_temp=75, min_speed=100, max_speed=20
         # - Calculation:
         #   normalized = (60 - 30) / (75 - 30) = 30 / 45 = 2/3
-        #   speed = 100 + (2/3) * (20 - 100) = 100 - (2/3) * 80 = 100 - 53.33 = 46.67 -> rounded to 47
+        # speed = 100 + (2/3) * (20 - 100) = 100 - (2/3) * 80 = 100 - 53.33 =
+        # 46.67 -> rounded to 47
         assert (
             calculate_safe_fan_speed(60, min_temp=75, max_temp=30, min_speed=20, max_speed=100)
             == 47

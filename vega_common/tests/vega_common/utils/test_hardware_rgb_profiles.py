@@ -361,7 +361,8 @@ class TestColorApplications:
                     results[hw_type] != original_color_tuple
                 ), f"Correction for '{hw_type}' did not change the color {test_color}"
 
-        # Optional: Add a check that at least one non-generic, non-asrock correction changed the color
+        # Optional: Add a check that at least one non-generic, non-asrock
+        # correction changed the color
         non_generic_changed = any(
             results[hw] != original_color_tuple
             for hw in hardware_types

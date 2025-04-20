@@ -184,7 +184,8 @@ def gpu_thread(_):
         logging.info("Stopping GPU monitors...")
         device_manager.stop_all_monitors()
         logging.info("GPU monitors stopped.")
-        # NVML cleanup is handled within the Monitor/Controller cleanup methods via _shutdown_nvml_safe
+        # NVML cleanup is handled within the Monitor/Controller cleanup methods
+        # via _shutdown_nvml_safe
 
     logging.info("GPU thread finished.")
     return None  # Explicitly return None

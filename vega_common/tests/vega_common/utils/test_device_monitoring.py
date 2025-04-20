@@ -61,7 +61,8 @@ class TestDeviceStatus:
         # Check history values
         history = status.get_property_history("temperature")
         assert len(history) == 10
-        # With a window size of 10 and 3 updates, we expect 7 default values (0.0) followed by 3 updates
+        # With a window size of 10 and 3 updates, we expect 7 default values (0.0)
+        # followed by 3 updates
         expected_history = [0.0] * 7 + [30.0, 35.0, 40.0]
         assert history == expected_history
 

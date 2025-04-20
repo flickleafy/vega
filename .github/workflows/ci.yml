@@ -87,7 +87,11 @@ jobs:
       - name: Install linting dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8>=5.0.0 mypy>=1.0.0
+          pip install flake8>=5.0.0 mypy>=1.0.0 black
+
+      - name: Format code with Black
+        run: |
+          black vega_common vega_server vega_client --line-length 100 --check
 
       - name: Check with flake8
         run: |
