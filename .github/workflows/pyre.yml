@@ -56,7 +56,7 @@ jobs:
           requirements-path: 'requirements.txt'
 
       - name: Upload Pyre Results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pyre-results
           path: '.pyre'
