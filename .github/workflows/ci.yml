@@ -24,52 +24,41 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          # Install GObject Introspection and required dependencies
-          sudo apt-get install -y \
-            libgirepository1.0-dev \
+          # Install essential build tools and GObject Introspection dependencies
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config \
             libcairo2-dev \
+            libgirepository1.0-dev \
             libglib2.0-dev \
             gir1.2-gtk-3.0 \
-            pkg-config \
             python3-dev \
             gobject-introspection \
             libusb-1.0-0-dev \
-            libudev-dev \
-            python3-gi \
-            python3-gi-cairo
+            libudev-dev
+          # Clean up apt cache
+          sudo rm -rf /var/lib/apt/lists/*
 
-          # Find location of girepository-2.0.pc
-          sudo find /usr -name "girepository-2.0.pc" || echo "girepository-2.0.pc not found in /usr"
-
-          # Check pkgconfig paths
-          pkg-config --variable pc_path pkg-config
-
-      - name: Debug environment
-        continue-on-error: true
+      - name: Check pkg-config setup
         run: |
-          # Set PKG_CONFIG_PATH to include common locations for .pc files
-          export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig:$PKG_CONFIG_PATH
+          echo "--- Checking pkg-config for girepository ---"
+          pkg-config --modversion gobject-introspection-1.0 || echo "gobject-introspection-1.0 not found by pkg-config"
+          pkg-config --exists girepository-1.0 && echo "Found girepository-1.0.pc" || echo "girepository-1.0.pc not found"
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+          echo "--- Listing potential pkgconfig directories ---"
+          ls -d /usr/lib/*/pkgconfig || echo "No standard pkgconfig dirs found"
+          ls -d /usr/share/pkgconfig || echo "/usr/share/pkgconfig not found"
+          echo "--- Finding girepository pc files ---"
+          sudo find /usr -name "girepository*.pc" || echo "No girepository*.pc files found in /usr"
 
-          # Try to locate girepository-2.0.pc
-          pkg-config --exists girepository-2.0 && echo "Found girepository-2.0.pc" || echo "ERROR: girepository-2.0.pc not found"
-          pkg-config --modversion girepository-2.0 || echo "ERROR: Cannot get girepository-2.0 version"
-
-          # Debugging package contents
-          dpkg -L libgirepository1.0-dev | grep .pc || echo "No .pc files in libgirepository1.0-dev"
-
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-
-          # Set PKG_CONFIG_PATH for PyGObject installation
-          export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig:$PKG_CONFIG_PATH
-
-          # Install PyGObject with system packages instead of building from source
-          pip install pycairo
-
-          # Now install the rest of the requirements
+          # Explicitly set PKG_CONFIG_PATH to help find .pc files
+          export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig:$PKG_CONFIG_PATH
+          echo "Using PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+          # Install requirements, including PyGObject which needs the .pc file
           pip install -r requirements.txt
+          # Install local package
           pip install -e ./vega_common
 
       - name: Run tests
