@@ -1,6 +1,7 @@
 # Core dependencies
 psutil>=5.9.0
-PyGObject>=3.42.0
+pycairo==1.26.0
+PyGObject==3.48.1
 liquidctl>=1.12.0
 # For GPU monitoring and control
 nvidia-ml-py>=12.570.0

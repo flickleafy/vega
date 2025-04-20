@@ -28,13 +28,16 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             pkg-config \
             libcairo2-dev \
+            libgirepository-1.0-1 \
             libgirepository1.0-dev \
             libglib2.0-dev \
             gir1.2-gtk-3.0 \
             python3-dev \
             gobject-introspection \
             libusb-1.0-0-dev \
-            libudev-dev
+            libudev-dev \
+            python3-gi \
+            python3-cairo
           # Clean up apt cache
           sudo rm -rf /var/lib/apt/lists/*
 
@@ -49,6 +52,8 @@ jobs:
           ls -d /usr/share/pkgconfig || echo "/usr/share/pkgconfig not found"
           echo "--- Finding girepository pc files ---"
           sudo find /usr -name "girepository*.pc" || echo "No girepository*.pc files found in /usr"
+          echo "--- Checking installed libgirepository packages ---"
+          dpkg -l | grep libgirepository || echo "No libgirepository packages found via dpkg"
 
       - name: Install Python dependencies
         run: |
