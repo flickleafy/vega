@@ -87,7 +87,7 @@ jobs:
       - name: Install linting dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8>=5.0.0 mypy>=1.0.0 black
+          pip install flake8>=5.0.0 mypy>=1.0.0 black autopep8
 
       - name: Format code with Black
         run: |
@@ -95,7 +95,14 @@ jobs:
 
       - name: Check with flake8
         run: |
-          python -m flake8 vega_common vega_server vega_client --max-line-length=100 --statistics --count
+          # Use setup.cfg configuration instead of command line arguments
+          python -m flake8 vega_common vega_server vega_client
+
+      - name: Auto-fix flake8 issues (information only)
+        continue-on-error: true
+        run: |
+          # Show how autopep8 would fix issues, but don't modify files
+          autopep8 --max-line-length=100 --aggressive --aggressive --diff -r vega_common vega_server vega_client || true
 
       - name: Type check with mypy
         run: |
