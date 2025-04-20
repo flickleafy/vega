@@ -33,7 +33,11 @@ jobs:
       fail-fast: false
       matrix:
         language: ['python']
-        python-version: ['3.9', '3.10']
+        # Run only on Python 3.10, other versions are commented out
+        python-version: [
+            # '3.9',
+            '3.10',
+          ]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
         # Learn more about CodeQL language support at https://aka.ms/codeql-docs/language-support
 
@@ -49,7 +53,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libusb-1.0-0-dev libudev-dev
+          sudo apt-get install -y libusb-1.0-0-dev libudev-dev libcairo2-dev pkg-config python3-dev libgirepository1.0-dev
 
       - name: Install Python dependencies
         run: |
