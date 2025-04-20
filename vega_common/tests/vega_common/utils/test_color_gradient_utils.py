@@ -1061,8 +1061,11 @@ class TestHelperFunctions:
         except ImportError:
             pytest.skip("colour-science library not installed")
 
-    def test_map_to_srgb_gamut_performance(self):
+    def test_map_to_srgb_gamut_performance(self, run_performance_tests):
         """Test that sRGB gamut mapping maintains reasonable performance."""
+        # Only run detailed performance tests when explicitly running this test
+        if not run_performance_tests:
+            pytest.skip("Performance tests only run with --runperf flag")
         try:
             import time
             import colour
