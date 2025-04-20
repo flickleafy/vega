@@ -74,3 +74,10 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: '/language:${{ matrix.language }}'
+
+      # Upload SARIF results to GitHub
+      - name: Upload SARIF results
+        uses: actions/upload-artifact@v3
+        with:
+          name: CodeQL Results
+          path: /home/runner/work/vega/results/python.sarif
