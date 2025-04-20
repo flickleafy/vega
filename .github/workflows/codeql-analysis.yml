@@ -77,7 +77,7 @@ jobs:
 
       # Upload SARIF results to GitHub
       - name: Upload SARIF results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: CodeQL Results
           path: /home/runner/work/vega/results/python.sarif
