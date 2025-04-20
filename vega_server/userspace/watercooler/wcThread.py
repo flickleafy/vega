@@ -21,7 +21,9 @@ PUMP_SPEED_ROW = 2
 TEMPERATURE_WINDOW_SIZE = 10
 
 # Setup basic logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(threadName)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(threadName)s - %(message)s"
+)
 
 
 def watercooler_thread(_):
@@ -46,7 +48,9 @@ def watercooler_thread(_):
         cpu_monitor = CpuMonitor(device_id=cpu_monitor_id, monitoring_interval=5.0)
 
         if cpu_monitor.status.has_error("initialization"):
-            logging.error(f"CPU Monitor initialization failed: {cpu_monitor.status.get_error('initialization')}")
+            logging.error(
+                f"CPU Monitor initialization failed: {cpu_monitor.status.get_error('initialization')}"
+            )
             cpu_monitor = None
         else:
             device_manager.register_monitor(cpu_monitor)
@@ -91,22 +95,30 @@ def watercooler_thread(_):
             cpu_temp = None
             cpu_average_temp = None
             if cpu_monitor:
-                cpu_status = device_manager.get_device_status(cpu_monitor.device_type, cpu_monitor_id)
+                cpu_status = device_manager.get_device_status(
+                    cpu_monitor.device_type, cpu_monitor_id
+                )
                 if cpu_status:
                     cpu_temp = cpu_status.get_property("temperature")
                     if cpu_temp is None or cpu_status.is_error("temperature"):
-                        logging.warning(f"CPU Monitor ({cpu_monitor_id}): No valid temperature reading. Will attempt estimation.")
+                        logging.warning(
+                            f"CPU Monitor ({cpu_monitor_id}): No valid temperature reading. Will attempt estimation."
+                        )
                         cpu_temp = None
                     else:
                         cpu_temp_window.fill(cpu_temp)
                         cpu_temp_window.add(cpu_temp)
                         cpu_average_temp = cpu_temp_window.get_average()
                 else:
-                    logging.warning(f"Could not retrieve status for CPU monitor ({cpu_monitor_id}).")
+                    logging.warning(
+                        f"Could not retrieve status for CPU monitor ({cpu_monitor_id})."
+                    )
 
             if not wc_devices:
                 if cpu_temp is not None:
-                    logging.info(f"CPU Temp: {cpu_temp:.1f}°C, Avg: {cpu_average_temp:.1f}°C (No WC Devices)")
+                    logging.info(
+                        f"CPU Temp: {cpu_temp:.1f}°C, Avg: {cpu_average_temp:.1f}°C (No WC Devices)"
+                    )
                     globals.WC_DATA_OUT[0]["cpu_degree"] = round(cpu_temp, 1)
                     globals.WC_DATA_OUT[0]["cpu_average_degree"] = round(cpu_average_temp, 1)
                 else:
@@ -120,7 +132,9 @@ def watercooler_thread(_):
 
                 wc_status = wcStatus.get_wc_status(wc_devices, index)
                 if not wc_status:
-                    logging.warning(f"Could not get status for WC device {index} ({device.description})")
+                    logging.warning(
+                        f"Could not get status for WC device {index} ({device.description})"
+                    )
                     continue
 
                 wc_temp = wc_status[LIQUID_TEMPERATURE_ROW][VALUE_COLUMN]
@@ -131,21 +145,23 @@ def watercooler_thread(_):
                     # Fall back to estimating CPU temperature from liquid temperature
                     # if no sensor data is available
                     cpu_temp = estimate_cpu_from_liquid_temp(wc_temp)
-                    logging.debug(f"Estimated CPU temp: {cpu_temp:.1f}°C from liquid temp {wc_temp:.1f}°C")
+                    logging.debug(
+                        f"Estimated CPU temp: {cpu_temp:.1f}°C from liquid temp {wc_temp:.1f}°C"
+                    )
                     cpu_temp_window.fill(cpu_temp)
                     cpu_temp_window.add(cpu_temp)
                     cpu_average_temp = cpu_temp_window.get_average()
 
                 # Fill windows if they are empty (only happens on first iteration)
                 wc_temp_window.fill(wc_temp)
-                
+
                 # Add current temperatures to sliding windows
                 wc_temp_window.add(wc_temp)
                 wc_average_temp = wc_temp_window.get_average()
 
                 if cpu_average_temp is None:
                     cpu_average_temp = wc_average_temp
-                
+
                 # Weighted average of CPU and Liquid temperatures calculation
                 # Used to smooth out the fan speed changes and avoid rapid fluctuations
                 weighed_average_temp = (wc_average_temp + (cpu_average_temp * 0.85)) / 2
@@ -154,7 +170,9 @@ def watercooler_thread(_):
                     array_color = lightingColor.set_led_color(wc_devices, index, wc_average_temp)
                     fan_status = wcTemp.set_wc_fan_speed(wc_devices, index, weighed_average_temp)
                 except Exception as e:
-                    logging.error(f"Error during WC control (LED/Fan) for device {index}: {e}", exc_info=True)
+                    logging.error(
+                        f"Error during WC control (LED/Fan) for device {index}: {e}", exc_info=True
+                    )
                     array_color = [0, 0, 0]
                     fan_status = 0
 
@@ -173,7 +191,9 @@ def watercooler_thread(_):
                 globals.WC_DATA_OUT[0]["wc_fan_percent"] = fan_status
                 globals.WC_DATA_OUT[0]["wc_pump_speed"] = wc_pump_speed
                 globals.WC_DATA_OUT[0]["cpu_degree"] = round(cpu_temp, 1)
-                globals.WC_DATA_OUT[0]["cpu_average_degree"] = round(cpu_average_temp, 1) if cpu_average_temp is not None else None
+                globals.WC_DATA_OUT[0]["cpu_average_degree"] = (
+                    round(cpu_average_temp, 1) if cpu_average_temp is not None else None
+                )
                 globals.WC_DATA_OUT[0]["array_color"] = array_color
 
                 if len(wc_devices) > 1:

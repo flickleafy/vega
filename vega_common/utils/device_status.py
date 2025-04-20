@@ -68,7 +68,9 @@ class DeviceStatus:
         """
         return self.status_properties.get(property_name, default)
 
-    def register_tracked_property(self, property_name: str, default_value: Union[int, float, None] = 0) -> None:
+    def register_tracked_property(
+        self, property_name: str, default_value: Union[int, float, None] = 0
+    ) -> None:
         """
         Register a property to be tracked in history.
 
@@ -80,7 +82,9 @@ class DeviceStatus:
         if property_name not in self.status_history:
             # Use a window of size 10 to match test_tracking_properties expectations
             window_size = 10
-            self.status_history[property_name] = NumericSlidingWindow(window_size, default_value=default_value)
+            self.status_history[property_name] = NumericSlidingWindow(
+                window_size, default_value=default_value
+            )
 
     def get_property_average(self, property_name: str, default: float = 0.0) -> float:
         """
@@ -123,7 +127,7 @@ class DeviceStatus:
             "device_id": self.device_id,
             "device_type": self.device_type,
             "last_update": self.last_update.isoformat(),
-            **self.status_properties
+            **self.status_properties,
         }
 
         # Add average values for tracked properties
@@ -177,13 +181,13 @@ class DeviceStatus:
             Optional[str]: Error message if one exists, None otherwise.
         """
         return self.errors.get(property_name)
-        
+
     def clear_errors(self) -> None:
         """
         Clear all error messages.
-        
+
         This is useful during cleanup or when resetting the status object.
-        
+
         Complexity: O(1) - Dictionary clear operation.
         """
         self.errors.clear()

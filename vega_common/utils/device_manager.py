@@ -80,8 +80,9 @@ class DeviceManager:
             result[device_key] = monitor.get_status_dict()
         return result
 
-    def apply_device_settings(self, device_type: str, device_id: str,
-                              settings: Dict[str, Any]) -> bool:
+    def apply_device_settings(
+        self, device_type: str, device_id: str, settings: Dict[str, Any]
+    ) -> bool:
         """
         Apply settings to a specific device.
 

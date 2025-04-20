@@ -19,7 +19,8 @@ def start_server(address, port, server_name, send_data_1, send_data_2):
                 connection, addr = server_socket.accept()
                 print(f"Connection from {addr}")
                 client_thread = threading.Thread(
-                    target=handle_client, args=(connection, send_data_1, send_data_2))
+                    target=handle_client, args=(connection, send_data_1, send_data_2)
+                )
                 client_thread.start()
             except Exception as e:
                 print(f"An error occurred with a client: {e}")
@@ -52,11 +53,10 @@ def data_transfer_loop(connection, send_data_1, send_data_2):
                 print("Connection lost. Trying to reconnect...")
                 return False
 
-            json_data_in = json_data_in.decode('utf-8')
+            json_data_in = json_data_in.decode("utf-8")
             json_data_out = json.dumps({**send_data_1[0], **send_data_2[0]})
-            print(get_current_time() +
-                  "Sending to gateway server: ", str(json_data_out))
-            connection.sendall(str(json_data_out).encode('utf-8'))
+            print(get_current_time() + "Sending to gateway server: ", str(json_data_out))
+            connection.sendall(str(json_data_out).encode("utf-8"))
         except Exception as e:
             print(f"An error occurred in data transfer: {e}")
             return False

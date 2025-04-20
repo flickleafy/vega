@@ -1,6 +1,7 @@
 """
 Setup configuration for vega_common package.
 """
+
 from setuptools import setup, find_packages
 
 setup(

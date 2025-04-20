@@ -25,29 +25,55 @@ Usage:
     from vega_common.utils.color_utils import rgb_to_hsv, hsv_to_rgb
     from vega_common.utils.temperature_utils import estimate_cpu_from_liquid_temp
     from vega_common.utils.sliding_window import SlidingWindow
-    
+
     # Or use shortcuts from the root package
     from vega_common import read_file, list_average, get_current_time, rgb_to_hsv, SlidingWindow
 """
 
 # Import common utilities for easier access
 from vega_common.utils.files_manipulation import (
-    read_file, write_file, safe_open, ensure_directory_exists,
-    read_json_file, write_json_file # Add new JSON functions
+    read_file,
+    write_file,
+    safe_open,
+    ensure_directory_exists,
+    read_json_file,
+    write_json_file,  # Add new JSON functions
 )
-from vega_common.utils.list_process import list_average, remove_first_add_last, safe_get, create_sliding_window
+from vega_common.utils.list_process import (
+    list_average,
+    remove_first_add_last,
+    safe_get,
+    create_sliding_window,
+)
 from vega_common.utils.sub_process import run_cmd, run_cmd_with_status, run_cmd_sudo
-from vega_common.utils.datetime_utils import get_current_time, get_timestamp, format_duration, is_older_than
+from vega_common.utils.datetime_utils import (
+    get_current_time,
+    get_timestamp,
+    format_duration,
+    is_older_than,
+)
 from vega_common.utils.color_utils import (
-    rgb_to_hsv, hsv_to_rgb, rgb_to_hex, hex_to_rgb,
-    shift_hue, adjust_brightness, normalize_color_value,
-    normalize_rgb_values, colors_are_similar, calculate_color_signature,
-    calculate_color_distance, rgb_to_rgbcolor, handle_extreme_hsv
+    rgb_to_hsv,
+    hsv_to_rgb,
+    rgb_to_hex,
+    hex_to_rgb,
+    shift_hue,
+    adjust_brightness,
+    normalize_color_value,
+    normalize_rgb_values,
+    colors_are_similar,
+    calculate_color_signature,
+    calculate_color_distance,
+    rgb_to_rgbcolor,
+    handle_extreme_hsv,
 )
 from vega_common.utils.temperature_utils import (
-    celsius_to_fahrenheit, fahrenheit_to_celsius,
-    estimate_cpu_from_liquid_temp, calculate_safe_fan_speed,
-    cpu_temp_to_fan_speed, gpu_temp_to_fan_speed
+    celsius_to_fahrenheit,
+    fahrenheit_to_celsius,
+    estimate_cpu_from_liquid_temp,
+    calculate_safe_fan_speed,
+    cpu_temp_to_fan_speed,
+    gpu_temp_to_fan_speed,
 )
 from vega_common.utils.hardware_rgb_profiles import (
     aorus_x470_hue_fix,
@@ -60,16 +86,24 @@ from vega_common.utils.hardware_rgb_profiles import (
 )
 
 from vega_common.utils.color_gradient_utils import (
-    create_color_gradient, create_color_gradient_cielch, create_rainbow_gradient,
-    create_temperature_gradient, get_temperature_color, temperature_to_color,
-    _map_to_srgb_gamut, _lch_to_rgb_norm, _is_rgb_in_gamut
+    create_color_gradient,
+    create_color_gradient_cielch,
+    create_rainbow_gradient,
+    create_temperature_gradient,
+    get_temperature_color,
+    temperature_to_color,
+    _map_to_srgb_gamut,
+    _lch_to_rgb_norm,
+    _is_rgb_in_gamut,
 )
+
 # Import the new SlidingWindow class
 from vega_common.utils.sliding_window import SlidingWindow, NumericSlidingWindow
+
 # Import process utilities
 from vega_common.utils.process_utils import get_process_list, similar_string_list
 
-__version__ = '0.1.0'
-__author__ = 'Vega Team'
+__version__ = "0.1.0"
+__author__ = "Vega Team"
 
 # Add new utils to __all__ if defining it, otherwise they are exported by default

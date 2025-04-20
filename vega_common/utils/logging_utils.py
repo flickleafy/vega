@@ -21,66 +21,66 @@ class TaskAwareFormatter(logging.Formatter):
 
     def format(self, record):
         """Format the log record with task context awareness.
-        
+
         Handles exceptions gracefully to ensure logging never fails.
         """
         # This variable will store the original message to return in case of error
         original_message = "Unknown message"
-        
+
         try:
             # Store original message
             original_message = record.getMessage()
-            
+
             # Get task_id from thread_local if it exists
             task_id = getattr(thread_local, "task_id", "")
-            
+
             # Create a formatted message with task_id if it exists
             if task_id:
                 formatted_message = f"[{task_id}] {original_message}"
                 record.task_id = task_id  # Add task_id as an attribute for tests to check
             else:
                 formatted_message = original_message
-                
+
             # Temporarily modify the message
             record.msg = formatted_message
-            
+
             # Format the record using parent formatter
             result = super().format(record)
-            
+
             # Restore the original message
             record.msg = original_message
-            
+
             return result
         except Exception as e:
             # Log a warning about the formatting error (without using the formatter itself)
             sys.stderr.write(f"Critical error in log formatter: {str(e)}\n")
-            
+
             # Ensure we always return a string, never raise an exception
-            level_name = getattr(record, 'levelname', 'ERROR') if hasattr(record, 'levelname') else 'ERROR'
-            
+            level_name = (
+                getattr(record, "levelname", "ERROR") if hasattr(record, "levelname") else "ERROR"
+            )
+
             # Return a simple fallback format
             return f"{level_name} - Formatting Error: {original_message}"
 
 
 def setup_logging(log_file="vega.log", debug=False):
     """Set up logging with task awareness and thread safety.
-    
+
     Args:
         log_file: Path to the log file
         debug: Whether to enable debug logging
-        
+
     Returns:
         A configured logger instance
-        
+
     Raises:
         PermissionError: If the log file or directory cannot be created or written to
         OSError: For other file-related errors
     """
     # Create formatters
     console_formatter = TaskAwareFormatter("%(asctime)s - %(levelname)s - %(message)s")
-    file_formatter = TaskAwareFormatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    file_formatter = TaskAwareFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
     # Configure root logger
     root_logger = logging.getLogger()
@@ -96,8 +96,9 @@ def setup_logging(log_file="vega.log", debug=False):
     root_logger.addHandler(console_handler)
 
     # Detect if we're running in a test environment
-    in_test = any('pytest' in frame[0] or 'unittest' in frame[0] 
-                 for frame in traceback.extract_stack())
+    in_test = any(
+        "pytest" in frame[0] or "unittest" in frame[0] for frame in traceback.extract_stack()
+    )
 
     # Set up file logging
     try:
@@ -106,20 +107,20 @@ def setup_logging(log_file="vega.log", debug=False):
         if log_dir:
             # Ensure directory exists before creating the file handler
             os.makedirs(log_dir, exist_ok=True)
-            
+
         # Use rotating file handler to prevent logs from growing too large
         file_handler = handlers.RotatingFileHandler(
             log_file,
             maxBytes=10 * 1024 * 1024,  # 10MB per file
-            backupCount=5,              # Keep 5 backup files
+            backupCount=5,  # Keep 5 backup files
         )
         file_handler.setFormatter(file_formatter)
         root_logger.addHandler(file_handler)
-            
+
     except (PermissionError, OSError, IOError) as e:
         # Log the error
         root_logger.warning(f"Failed to set up file logging: {str(e)}")
-        
+
         # In test environments, allow specific exceptions to be caught by the test
         if in_test:
             raise

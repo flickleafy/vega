@@ -6,12 +6,12 @@ from vega_common.utils.files_manipulation import read_file, write_file
 def layout_has_multi_screens():
     has_multi_screens = False
     try:
-        xorg_conf_file = read_file('/etc/X11/xorg.conf')
+        xorg_conf_file = read_file("/etc/X11/xorg.conf")
         sections = parse_xconfig.parse_sections(xorg_conf_file)
         serverlayout_section = parse_xconfig.get_specific_section(
-            xorg_conf_file, sections, 'ServerLayout')
-        has_multi_screens: bool = check_multi_screens(
-            xorg_conf_file, serverlayout_section)
+            xorg_conf_file, sections, "ServerLayout"
+        )
+        has_multi_screens: bool = check_multi_screens(xorg_conf_file, serverlayout_section)
         if has_multi_screens:
             check_and_fix_layout_order(xorg_conf_file, serverlayout_section)
     except Exception as err:
@@ -21,12 +21,12 @@ def layout_has_multi_screens():
 
 
 def check_multi_screens(lines, section):
-    start = section['start']
-    end = section['end']
+    start = section["start"]
+    end = section["end"]
     screens = 0
     for index in range(start + 1, end - 1):
         line = lines[index]
-        if 'Screen' in line:
+        if "Screen" in line:
             screens += 1
     if screens > 1:
         return True
@@ -34,15 +34,15 @@ def check_multi_screens(lines, section):
 
 
 def check_and_fix_layout_order(lines, section):
-    start = section['start']
-    end = section['end']
+    start = section["start"]
+    end = section["end"]
     changed = False
     for index in range(start + 1, end - 1):
         line = lines[index]
-        if ('RightOf' in line) or ('LeftOf' in line):
+        if ("RightOf" in line) or ("LeftOf" in line):
             new_line = '    Screen      1  "Screen1" Absolute 9999 9999\n'
             lines[index] = new_line
             changed = True
 
         if changed:
-            write_file('/etc/X11/xorg.conf', "".join(lines))
+            write_file("/etc/X11/xorg.conf", "".join(lines))

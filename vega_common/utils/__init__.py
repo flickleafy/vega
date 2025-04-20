@@ -18,7 +18,7 @@ from vega_common.utils.color_utils import (
     calculate_color_signature,
     calculate_color_distance,
     rgb_to_rgbcolor,
-    handle_extreme_hsv
+    handle_extreme_hsv,
 )
 
 from vega_common.utils.hardware_rgb_profiles import (
@@ -32,9 +32,15 @@ from vega_common.utils.hardware_rgb_profiles import (
 )
 
 from vega_common.utils.color_gradient_utils import (
-    create_color_gradient, create_color_gradient_cielch, create_rainbow_gradient,
-    create_temperature_gradient, get_temperature_color, temperature_to_color,
-    _map_to_srgb_gamut, _lch_to_rgb_norm, _is_rgb_in_gamut
+    create_color_gradient,
+    create_color_gradient_cielch,
+    create_rainbow_gradient,
+    create_temperature_gradient,
+    get_temperature_color,
+    temperature_to_color,
+    _map_to_srgb_gamut,
+    _lch_to_rgb_norm,
+    _is_rgb_in_gamut,
 )
 
 # Re-export list processing utilities
@@ -42,17 +48,11 @@ from vega_common.utils.list_process import (
     list_average,
     remove_first_add_last,
     safe_get,
-    create_sliding_window
+    create_sliding_window,
 )
 
 # Re-export sliding window implementations
-from vega_common.utils.sliding_window import (
-    SlidingWindow,
-    NumericSlidingWindow
-)
+from vega_common.utils.sliding_window import SlidingWindow, NumericSlidingWindow
 
 # Re-export process utilities
-from vega_common.utils.process_utils import (
-    get_process_list,
-    similar_string_list
-)
+from vega_common.utils.process_utils import get_process_list, similar_string_list

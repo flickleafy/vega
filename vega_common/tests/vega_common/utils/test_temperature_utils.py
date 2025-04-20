@@ -4,6 +4,7 @@ Unit tests for the temperature_utils module.
 Tests all functions in the vega_common.utils.temperature_utils module to ensure
 they behave as expected across different contexts and edge cases.
 """
+
 import pytest
 import math
 from vega_common.utils.temperature_utils import (
@@ -18,8 +19,9 @@ from vega_common.utils.temperature_utils import (
     gpu_temp_to_fan_speed,
     cpu_temp_to_fan_speed,
     normalize_temperature,
-    temperature_within_range
+    temperature_within_range,
 )
+
 
 class TestTemperatureConversions:
     """Tests for temperature conversion functions."""
@@ -34,7 +36,9 @@ class TestTemperatureConversions:
 
         # Test with floating point values
         assert pytest.approx(celsius_to_fahrenheit(37.5), 0.001) == 99.5  # Body temperature
-        assert pytest.approx(celsius_to_fahrenheit(-17.8), 0.001) == -0.04 # 0 degrees Fahrenheit (adjusting expected slightly for precision)
+        assert (
+            pytest.approx(celsius_to_fahrenheit(-17.8), 0.001) == -0.04
+        )  # 0 degrees Fahrenheit (adjusting expected slightly for precision)
 
         # Test with very large and very small values
         assert celsius_to_fahrenheit(1000) == 1832.0
@@ -82,7 +86,9 @@ class TestTemperatureConversions:
 
         # Very low temperatures
         assert pytest.approx(celsius_to_fahrenheit(-270), 0.01) == -454.0
-        assert pytest.approx(fahrenheit_to_celsius(-450), 0.01) == -267.778 # Corrected expected value
+        assert (
+            pytest.approx(fahrenheit_to_celsius(-450), 0.01) == -267.778
+        )  # Corrected expected value
 
 
 class TestCPUTemperatureEstimation:
@@ -107,14 +113,18 @@ class TestCPUTemperatureEstimation:
         offset = 15
         scaling_factor = 1.4
         expected = liquid_temp + (offset * scaling_factor)  # 45 + (15 * 1.4) = 45 + 21 = 66
-        assert estimate_cpu_from_liquid_temp(liquid_temp, offset, scaling_factor, mode=0) == expected
+        assert (
+            estimate_cpu_from_liquid_temp(liquid_temp, offset, scaling_factor, mode=0) == expected
+        )
 
         # Test with custom scaling factor
         liquid_temp = 45
         offset = 15
         scaling_factor = 2.0
         expected = liquid_temp + (offset * scaling_factor)  # 45 + (15 * 2.0) = 45 + 30 = 75
-        assert estimate_cpu_from_liquid_temp(liquid_temp, offset, scaling_factor, mode=0) == expected
+        assert (
+            estimate_cpu_from_liquid_temp(liquid_temp, offset, scaling_factor, mode=0) == expected
+        )
 
     def test_estimate_cpu_from_liquid_temp_mode_1(self):
         """Test CPU temperature estimation using mode 1 (empirical formula)."""
@@ -122,29 +132,38 @@ class TestCPUTemperatureEstimation:
 
         # Test with low temperature
         liquid_temp = 25
-        expected = 3.0 # (-727.5 + (30 * liquid_temp)) / 7.5  # (-727.5 + 750) / 7.5 = 22.5 / 7.5 = 3
+        expected = (
+            3.0  # (-727.5 + (30 * liquid_temp)) / 7.5  # (-727.5 + 750) / 7.5 = 22.5 / 7.5 = 3
+        )
         assert pytest.approx(estimate_cpu_from_liquid_temp(liquid_temp, mode=1), 0.001) == expected
 
         # Test with medium temperature
         liquid_temp = 35
-        expected = 43.0 # (-727.5 + (30 * liquid_temp)) / 7.5  # (-727.5 + 1050) / 7.5 = 322.5 / 7.5 = 43
+        expected = (
+            43.0  # (-727.5 + (30 * liquid_temp)) / 7.5  # (-727.5 + 1050) / 7.5 = 322.5 / 7.5 = 43
+        )
         assert pytest.approx(estimate_cpu_from_liquid_temp(liquid_temp, mode=1), 0.001) == expected
 
         # Test with high temperature
         liquid_temp = 45
-        expected = 83.0 # (-727.5 + (30 * liquid_temp)) / 7.5  # (-727.5 + 1350) / 7.5 = 622.5 / 7.5 = 83
+        expected = (
+            83.0  # (-727.5 + (30 * liquid_temp)) / 7.5  # (-727.5 + 1350) / 7.5 = 622.5 / 7.5 = 83
+        )
         assert pytest.approx(estimate_cpu_from_liquid_temp(liquid_temp, mode=1), 0.001) == expected
 
     def test_estimate_cpu_with_default_parameters(self):
         """Test CPU temperature estimation with default parameters."""
         # Default is mode=1
         liquid_temp = 30
-        expected = 23.0 # (-727.5 + (30 * liquid_temp)) / 7.5 = (-727.5 + 900) / 7.5 = 172.5 / 7.5 = 23
+        expected = (
+            23.0  # (-727.5 + (30 * liquid_temp)) / 7.5 = (-727.5 + 900) / 7.5 = 172.5 / 7.5 = 23
+        )
         assert pytest.approx(estimate_cpu_from_liquid_temp(liquid_temp), 0.001) == expected
 
         # Verify that offset and scaling_factor don't affect mode 1
-        assert (estimate_cpu_from_liquid_temp(liquid_temp) ==
-                estimate_cpu_from_liquid_temp(liquid_temp, 20, 2.0))
+        assert estimate_cpu_from_liquid_temp(liquid_temp) == estimate_cpu_from_liquid_temp(
+            liquid_temp, 20, 2.0
+        )
 
     def test_extreme_values(self):
         """Test CPU estimation with extreme liquid temperature values."""
@@ -252,42 +271,71 @@ class TestFanSpeedCalculation:
         min_temp_def, max_temp_def = 30, 75
         min_speed_def, max_speed_def = 20, 100
 
-        assert calculate_safe_fan_speed(30, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 20
-        assert calculate_safe_fan_speed(75, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 100
+        assert (
+            calculate_safe_fan_speed(30, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 20
+        )
+        assert (
+            calculate_safe_fan_speed(75, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 100
+        )
         # Midpoint: 52.5 -> speed 60
-        assert calculate_safe_fan_speed(52.5, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 60
+        assert (
+            calculate_safe_fan_speed(52.5, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 60
+        )
         # Below range
-        assert calculate_safe_fan_speed(20, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 20
+        assert (
+            calculate_safe_fan_speed(20, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 20
+        )
         # Above range
-        assert calculate_safe_fan_speed(85, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 100
+        assert (
+            calculate_safe_fan_speed(85, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 100
+        )
 
         # Edge cases
-        assert calculate_safe_fan_speed(50, min_temp=50, max_temp=50, min_speed=20, max_speed=100) == 100
-        assert calculate_safe_fan_speed(50, min_temp=30, max_temp=75, min_speed=60, max_speed=60) == 60
+        assert (
+            calculate_safe_fan_speed(50, min_temp=50, max_temp=50, min_speed=20, max_speed=100)
+            == 100
+        )
+        assert (
+            calculate_safe_fan_speed(50, min_temp=30, max_temp=75, min_speed=60, max_speed=60) == 60
+        )
 
         # Inverted temperature range (should still work if logic handles it)
         # When temperature range is inverted (min_temp > max_temp), the function:
         # 1. Swaps min_temp and max_temp
         # 2. Swaps min_speed and max_speed to maintain the correct mapping
         # 3. Then performs the calculation
-        
+
         # For inverted case:
         # - Original params: temp=60, min_temp=75, max_temp=30, min_speed=20, max_speed=100
         # - After swapping: temp=60, min_temp=30, max_temp=75, min_speed=100, max_speed=20
-        # - Calculation: 
+        # - Calculation:
         #   normalized = (60 - 30) / (75 - 30) = 30 / 45 = 2/3
         #   speed = 100 + (2/3) * (20 - 100) = 100 - (2/3) * 80 = 100 - 53.33 = 46.67 -> rounded to 47
-        assert calculate_safe_fan_speed(60, min_temp=75, max_temp=30, min_speed=20, max_speed=100) == 47
+        assert (
+            calculate_safe_fan_speed(60, min_temp=75, max_temp=30, min_speed=20, max_speed=100)
+            == 47
+        )
 
         # Test with standard (non-inverted) temperature range
         # Temp 60 is (60-30)/(75-30) = 30/45 = 2/3 of the way
         # Speed = 20 + (100-20) * (2/3) = 20 + 80 * (2/3) = 20 + 53.33 = 73.33 -> rounded to 73
-        assert calculate_safe_fan_speed(60, min_temp=30, max_temp=75, min_speed=20, max_speed=100) == 73
+        assert (
+            calculate_safe_fan_speed(60, min_temp=30, max_temp=75, min_speed=20, max_speed=100)
+            == 73
+        )
 
         # Inverted speed range with normal temperature range
         # Temp 60 -> proportion 2/3 from min_temp
         # Speed = 100 + (20 - 100) * (2/3) = 100 - 53.33 = 46.67 -> rounded to 47
-        assert calculate_safe_fan_speed(60, min_temp=30, max_temp=75, min_speed=100, max_speed=20) == 47
+        assert (
+            calculate_safe_fan_speed(60, min_temp=30, max_temp=75, min_speed=100, max_speed=20)
+            == 47
+        )
 
     def test_gpu_temp_to_fan_speed(self):
         """Test gpu_temp_to_fan_speed with various temperatures."""
@@ -316,7 +364,7 @@ class TestFanSpeedCalculation:
         # Let's assume the original intent was multiplicative: temp * (1 + modifier)
         # For temp=50, modifier=0.1: Effective temp = 50 * 1.1 = 55
         # Speed = ((5 * 55) - 100) * 0.5 = (275 - 100) * 0.5 = 175 * 0.5 = 87.5 -> rounded to 88
-        assert gpu_temp_to_fan_speed(50, 0.1) == 88 # Assuming multiplicative modifier
+        assert gpu_temp_to_fan_speed(50, 0.1) == 88  # Assuming multiplicative modifier
 
     def test_cpu_temp_to_fan_speed(self):
         """Test cpu_temp_to_fan_speed with various temperatures."""
@@ -329,7 +377,7 @@ class TestFanSpeedCalculation:
         # At temp=33.33..., speed should be just below 0: (6 * 33.33) - 200 = 199.98 - 200 = -0.02 -> round(0) -> 0
         # At temp=33.5, speed should be just above 0: (6 * 33.5) - 200 = 201 - 200 = 1 -> round(1) -> 1
         assert cpu_temp_to_fan_speed(33.33) == 0
-        assert cpu_temp_to_fan_speed(33.5) == 1 # Crossing point
+        assert cpu_temp_to_fan_speed(33.5) == 1  # Crossing point
 
         # Test at the crossing point (0% to positive %)
         assert cpu_temp_to_fan_speed(34) == 4  # (6 * 34) - 200 = 204 - 200 = 4
@@ -341,14 +389,17 @@ class TestFanSpeedCalculation:
         # Test high temperature (approaching 100%)
         # At temp=49, speed should be < 100: (6 * 49) - 200 = 294 - 200 = 94
         assert cpu_temp_to_fan_speed(49) == 94
-        assert cpu_temp_to_fan_speed(50) == 100 # Hits 100 exactly at 50
+        assert cpu_temp_to_fan_speed(50) == 100  # Hits 100 exactly at 50
 
         # Test extremely high temperature (should clamp to 100)
-        assert cpu_temp_to_fan_speed(60) == 100  # (6 * 60) - 200 = 360 - 200 = 160 -> clamped to 100
+        assert (
+            cpu_temp_to_fan_speed(60) == 100
+        )  # (6 * 60) - 200 = 360 - 200 = 160 -> clamped to 100
         assert cpu_temp_to_fan_speed(100) == 100
 
 
 # --- Refactored TestTemperatureUtils using pytest style ---
+
 
 class TestTemperatureUtilsPytest:
     """Test cases for temperature utilities using pytest assertions."""
@@ -385,9 +436,7 @@ class TestTemperatureUtilsPytest:
             average_temperatures([])
         temps = [20, 21, 22, 23, 100]
         assert pytest.approx(average_temperatures(temps)) == 37.2
-        assert pytest.approx(
-            average_temperatures(temps, discard_outliers=True)
-        ) == 21.5
+        assert pytest.approx(average_temperatures(temps, discard_outliers=True)) == 21.5
         assert average_temperatures([42, 42, 42]) == 42
 
     def test_calculate_temperature_trend(self):
@@ -451,7 +500,7 @@ class TestTemperatureUtilsPytest:
             (20, 40, "cold"),
             (40, 60, "moderate"),
             (60, 80, "hot"),
-            (80, 100, "extreme")
+            (80, 100, "extreme"),
         ]
         assert classify_temperature(15, custom_ranges) == "freezing"
         assert classify_temperature(30, custom_ranges) == "cold"
@@ -469,7 +518,9 @@ class TestTemperatureUtilsPytest:
         # Mode 1
         # Expected values recalculated based on formula: (-727.5 + (30 * liquid_temp)) / 7.5
         assert pytest.approx(estimate_cpu_from_liquid_temp(30, mode=1)) == 23.0
-        assert pytest.approx(estimate_cpu_from_liquid_temp(40, mode=1)) == 63.0 # Corrected expected value
+        assert (
+            pytest.approx(estimate_cpu_from_liquid_temp(40, mode=1)) == 63.0
+        )  # Corrected expected value
 
     def test_calculate_safe_fan_speed(self):
         """Test safe fan speed calculation."""
@@ -477,51 +528,80 @@ class TestTemperatureUtilsPytest:
         min_temp_def, max_temp_def = 30, 75
         min_speed_def, max_speed_def = 20, 100
 
-        assert calculate_safe_fan_speed(30, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 20
-        assert calculate_safe_fan_speed(75, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 100
+        assert (
+            calculate_safe_fan_speed(30, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 20
+        )
+        assert (
+            calculate_safe_fan_speed(75, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 100
+        )
         # Midpoint: 52.5 -> speed 60
-        assert calculate_safe_fan_speed(52.5, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 60
+        assert (
+            calculate_safe_fan_speed(52.5, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 60
+        )
         # Below range
-        assert calculate_safe_fan_speed(20, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 20
+        assert (
+            calculate_safe_fan_speed(20, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 20
+        )
         # Above range
-        assert calculate_safe_fan_speed(85, min_temp_def, max_temp_def, min_speed_def, max_speed_def) == 100
+        assert (
+            calculate_safe_fan_speed(85, min_temp_def, max_temp_def, min_speed_def, max_speed_def)
+            == 100
+        )
 
         # Edge cases
-        assert calculate_safe_fan_speed(50, min_temp=50, max_temp=50, min_speed=20, max_speed=100) == 100
-        assert calculate_safe_fan_speed(50, min_temp=30, max_temp=75, min_speed=60, max_speed=60) == 60
+        assert (
+            calculate_safe_fan_speed(50, min_temp=50, max_temp=50, min_speed=20, max_speed=100)
+            == 100
+        )
+        assert (
+            calculate_safe_fan_speed(50, min_temp=30, max_temp=75, min_speed=60, max_speed=60) == 60
+        )
 
         # Inverted temperature range (should still work if logic handles it)
         # When temperature range is inverted (min_temp > max_temp), the function:
         # 1. Swaps min_temp and max_temp
         # 2. Swaps min_speed and max_speed to maintain the correct mapping
         # 3. Then performs the calculation
-        
+
         # For inverted case:
         # - Original params: temp=60, min_temp=75, max_temp=30, min_speed=20, max_speed=100
         # - After swapping: temp=60, min_temp=30, max_temp=75, min_speed=100, max_speed=20
-        # - Calculation: 
+        # - Calculation:
         #   normalized = (60 - 30) / (75 - 30) = 30 / 45 = 2/3
         #   speed = 100 + (2/3) * (20 - 100) = 100 - (2/3) * 80 = 100 - 53.33 = 46.67 -> rounded to 47
-        assert calculate_safe_fan_speed(60, min_temp=75, max_temp=30, min_speed=20, max_speed=100) == 47
+        assert (
+            calculate_safe_fan_speed(60, min_temp=75, max_temp=30, min_speed=20, max_speed=100)
+            == 47
+        )
 
         # Test with standard (non-inverted) temperature range
         # Temp 60 is (60-30)/(75-30) = 30/45 = 2/3 of the way
         # Speed = 20 + (100-20) * (2/3) = 20 + 80 * (2/3) = 20 + 53.33 = 73.33 -> rounded to 73
-        assert calculate_safe_fan_speed(60, min_temp=30, max_temp=75, min_speed=20, max_speed=100) == 73
+        assert (
+            calculate_safe_fan_speed(60, min_temp=30, max_temp=75, min_speed=20, max_speed=100)
+            == 73
+        )
 
         # Inverted speed range with normal temperature range
         # Temp 60 -> proportion 2/3 from min_temp
         # Speed = 100 + (20 - 100) * (2/3) = 100 - 53.33 = 46.67 -> rounded to 47
-        assert calculate_safe_fan_speed(60, min_temp=30, max_temp=75, min_speed=100, max_speed=20) == 47
+        assert (
+            calculate_safe_fan_speed(60, min_temp=30, max_temp=75, min_speed=100, max_speed=20)
+            == 47
+        )
 
     def test_gpu_temp_to_fan_speed(self):
         """Test GPU temperature to fan speed conversion."""
         # Formula: max(0, min(100, round(((5 * temp) - 100) * 0.5)))
         # Original test had temp=30 -> 25, but clamped to 0. This seems wrong based on formula.
         # Let's use the calculated values:
-        assert gpu_temp_to_fan_speed(30) == 25 # ((5 * 30) - 100) / 2 = 25
-        assert gpu_temp_to_fan_speed(50) == 75 # ((5 * 50) - 100) / 2 = 75
-        assert gpu_temp_to_fan_speed(70) == 100 # ((5 * 70) - 100) / 2 = 125 -> clamped to 100
+        assert gpu_temp_to_fan_speed(30) == 25  # ((5 * 30) - 100) / 2 = 25
+        assert gpu_temp_to_fan_speed(50) == 75  # ((5 * 50) - 100) / 2 = 75
+        assert gpu_temp_to_fan_speed(70) == 100  # ((5 * 70) - 100) / 2 = 125 -> clamped to 100
         # Test with modifier (assuming multiplicative: temp * (1 + modifier))
         # temp=40, modifier=1 -> effective temp = 40 * (1+1) = 80
         # speed = ((5 * 80) - 100) / 2 = (400 - 100) / 2 = 150 -> clamped to 100
@@ -530,10 +610,10 @@ class TestTemperatureUtilsPytest:
     def test_cpu_temp_to_fan_speed(self):
         """Test CPU temperature to fan speed conversion."""
         # Formula: max(0, min(100, round((6 * temp) - 200)))
-        assert cpu_temp_to_fan_speed(30) == 0   # (6 * 30) - 200 = -20 -> 0
+        assert cpu_temp_to_fan_speed(30) == 0  # (6 * 30) - 200 = -20 -> 0
         assert cpu_temp_to_fan_speed(42) == 52  # (6 * 42) - 200 = 252 - 200 = 52
-        assert cpu_temp_to_fan_speed(50) == 100 # (6 * 50) - 200 = 100
-        assert cpu_temp_to_fan_speed(60) == 100 # (6 * 60) - 200 = 160 -> 100
+        assert cpu_temp_to_fan_speed(50) == 100  # (6 * 50) - 200 = 100
+        assert cpu_temp_to_fan_speed(60) == 100  # (6 * 60) - 200 = 160 -> 100
 
 
 class TestFanCurves:
@@ -541,7 +621,7 @@ class TestFanCurves:
 
     def test_cpu_fan_curve_progression(self):
         """Test that the CPU fan curve increases appropriately with temperature."""
-        previous_speed = -1 # Initialize to allow 0 speed
+        previous_speed = -1  # Initialize to allow 0 speed
 
         for temp in range(25, 71, 5):
             current_speed = cpu_temp_to_fan_speed(temp)
@@ -551,7 +631,7 @@ class TestFanCurves:
 
     def test_gpu_fan_curve_progression(self):
         """Test that the GPU fan curve increases appropriately with temperature."""
-        previous_speed = -1 # Initialize to allow 0 speed
+        previous_speed = -1  # Initialize to allow 0 speed
 
         for temp in range(25, 71, 5):
             current_speed = gpu_temp_to_fan_speed(temp)
@@ -561,13 +641,15 @@ class TestFanCurves:
 
     def test_linear_fan_curve_progression(self):
         """Test that the linear fan curve (calculate_safe_fan_speed) increases appropriately."""
-        previous_speed = -1 # Initialize to allow 0 speed
+        previous_speed = -1  # Initialize to allow 0 speed
 
         for temp in range(25, 71, 5):
             # Using a specific range for testing linearity
-            current_speed = calculate_safe_fan_speed(temp, min_temp=30, max_temp=60, min_speed=10, max_speed=90)
+            current_speed = calculate_safe_fan_speed(
+                temp, min_temp=30, max_temp=60, min_speed=10, max_speed=90
+            )
             assert current_speed >= previous_speed
-            assert 0 <= current_speed <= 100 # Check general bounds
+            assert 0 <= current_speed <= 100  # Check general bounds
             # Check specific bounds for this curve
             assert 10 <= current_speed <= 90 or temp < 30 or temp > 60
             previous_speed = current_speed
@@ -577,14 +659,17 @@ class TestAcrossTemperatureRanges:
     """Tests for functions across different temperature ranges relevant to computing."""
 
     # Adjusted expected ranges based on function calculations
-    @pytest.mark.parametrize("temp,expected_cpu_range,expected_gpu_range", [
-        (20, (0, 0),   (0, 0)),      # Below idle -> 0 speed for both
-        (35, (10, 10), (38, 38)),    # Idle temperature -> CPU: 10, GPU: 38
-        (50, (100, 100),(75, 75)),   # Light/Mid load -> CPU: 100, GPU: 75
-        (65, (100, 100),(100, 100)), # Medium/Heavy load -> CPU: 100, GPU: 100
-        (80, (100, 100),(100, 100)), # Heavy load -> Both 100
-        (95, (100, 100),(100, 100)), # Critical temperature -> Both 100
-    ])
+    @pytest.mark.parametrize(
+        "temp,expected_cpu_range,expected_gpu_range",
+        [
+            (20, (0, 0), (0, 0)),  # Below idle -> 0 speed for both
+            (35, (10, 10), (38, 38)),  # Idle temperature -> CPU: 10, GPU: 38
+            (50, (100, 100), (75, 75)),  # Light/Mid load -> CPU: 100, GPU: 75
+            (65, (100, 100), (100, 100)),  # Medium/Heavy load -> CPU: 100, GPU: 100
+            (80, (100, 100), (100, 100)),  # Heavy load -> Both 100
+            (95, (100, 100), (100, 100)),  # Critical temperature -> Both 100
+        ],
+    )
     def test_temperature_responses(self, temp, expected_cpu_range, expected_gpu_range):
         """Test that different functions respond appropriately to various temperature ranges."""
         # CPU fan response
@@ -612,7 +697,7 @@ class TestAcrossTemperatureRanges:
             # As liquid temperature increases, estimated CPU temp should increase,
             # and thus fan speed should generally increase or stay the same (due to clamping).
             assert 0 <= fan_speed <= 100
-            assert fan_speed >= previous_fan_speed # Check non-decreasing trend
+            assert fan_speed >= previous_fan_speed  # Check non-decreasing trend
 
             # A more specific check based on mode 1 estimation:
             # liquid=30 -> est_cpu=23 -> speed=0
@@ -622,8 +707,8 @@ class TestAcrossTemperatureRanges:
                 # Based on mode 1, CPU temp estimate exceeds 50C quickly, leading to 100% fan speed
                 assert fan_speed == 100
             elif liquid_temp == 35:
-                 assert fan_speed == 58 # (6*43)-200 = 258-200 = 58
+                assert fan_speed == 58  # (6*43)-200 = 258-200 = 58
             elif liquid_temp == 30:
-                 assert fan_speed == 0 # (6*23)-200 = 138-200 = -62 -> 0
+                assert fan_speed == 0  # (6*23)-200 = 138-200 = -62 -> 0
 
             previous_fan_speed = fan_speed

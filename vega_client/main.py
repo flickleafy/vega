@@ -6,6 +6,7 @@ import client.ctThread as ctThread
 import taskbar.appIndicator as aiTaskbar
 
 import globals
+
 globals.init()
 
 if __name__ == "__main__":

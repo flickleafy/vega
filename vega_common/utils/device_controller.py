@@ -24,7 +24,7 @@ class DeviceController(ABC):
         """
         self.device_id = device_id
         self.device_type = device_type
-        self.device_name = device_name 
+        self.device_name = device_name
 
     @abstractmethod
     def apply_settings(self, settings: Dict[str, Any]) -> bool:

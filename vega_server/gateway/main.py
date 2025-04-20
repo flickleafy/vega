@@ -1,4 +1,3 @@
-
 from threading import Thread, Event
 
 import server.svGWThread as svGWThread
@@ -6,9 +5,10 @@ import client.ctRootThread as ctRootThread
 import client.ctUserThread as ctUserThread
 
 import globals
+
 globals.init()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     z = Thread(target=ctRootThread.client_thread, args=(1,))
     z.start()

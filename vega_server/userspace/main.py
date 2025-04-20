@@ -1,4 +1,3 @@
-
 from threading import Thread, Event
 
 import server.svUserThread as svUserThread
@@ -6,9 +5,10 @@ import lighting.lightingThread as ltThread
 import watercooler.wcThread as wcThread
 
 import globals
+
 globals.init()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     x = Thread(target=wcThread.watercooler_thread, args=(1,))
     x.start()

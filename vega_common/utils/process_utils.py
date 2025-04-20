@@ -1,107 +1,193 @@
-\
 """
 Process utilities for the Vega project.
 
 This module provides functions for listing and filtering system processes.
 """
+
 import psutil
 from typing import Set, List
 
 # TODO: Consider making these lists configurable or loading from a file
-ignore_list = ['cryptd', 'btrfs', 'kworker', 'kthreadd',
-               'systemd', 'mount', 'napi', 'sleep', 'rcu',
-               'nvidia', 'slub', 'netns', 'migration',
-               'idle', 'sudo', 'cpu', 'irq', 'vfio', 'acpi',
-               'zswap', 'ipv6', 'nvme', 'charger', 'watchdog',
-               'postgres', 'docker', 'kernel', 'container',
-               'libvirt', 'preload', 'session', 'gdm', 'python',
-               'daemon', 'queue', 'bluetooth', 'scsi', 'raid',
-               'mongo', 'node', 'registry', 'gvfsd', 'gnome',
-               'shell', 'identity', 'redis', 'pipewire', 'dnsmasq',
-               'iprt', 'cron', 'snapd', 'php', 'xorg', 'pihole',
-               'master', 'notify', 'nacl', 'ksmd', 'tracker',
-               'modem', 'network', 'agent', 'bash', 'integrity',
-               'pulse', 'java', 'crash', 'ibus', 'dbus', 'snyk',
-               'dconf', 'gsd', 'qmgr', 'clam', 'volume', 'monitor',
-               'tray', 'power', 'compact', 'sys', 'color', 'notifier',
-               'xdg', 'store', 'disk', 'crypt', 'control', 'uvm',
-               'server', 'factory', 'audit', 'kdev', 'swap', 'ata',
-               'launcher', 'glib', 'package', 'cfg', 'dhcp', 'http',
-               'inet', 'wpa', 'block', 'poller']
+ignore_list = [
+    "cryptd",
+    "btrfs",
+    "kworker",
+    "kthreadd",
+    "systemd",
+    "mount",
+    "napi",
+    "sleep",
+    "rcu",
+    "nvidia",
+    "slub",
+    "netns",
+    "migration",
+    "idle",
+    "sudo",
+    "cpu",
+    "irq",
+    "vfio",
+    "acpi",
+    "zswap",
+    "ipv6",
+    "nvme",
+    "charger",
+    "watchdog",
+    "postgres",
+    "docker",
+    "kernel",
+    "container",
+    "libvirt",
+    "preload",
+    "session",
+    "gdm",
+    "python",
+    "daemon",
+    "queue",
+    "bluetooth",
+    "scsi",
+    "raid",
+    "mongo",
+    "node",
+    "registry",
+    "gvfsd",
+    "gnome",
+    "shell",
+    "identity",
+    "redis",
+    "pipewire",
+    "dnsmasq",
+    "iprt",
+    "cron",
+    "snapd",
+    "php",
+    "xorg",
+    "pihole",
+    "master",
+    "notify",
+    "nacl",
+    "ksmd",
+    "tracker",
+    "modem",
+    "network",
+    "agent",
+    "bash",
+    "integrity",
+    "pulse",
+    "java",
+    "crash",
+    "ibus",
+    "dbus",
+    "snyk",
+    "dconf",
+    "gsd",
+    "qmgr",
+    "clam",
+    "volume",
+    "monitor",
+    "tray",
+    "power",
+    "compact",
+    "sys",
+    "color",
+    "notifier",
+    "xdg",
+    "store",
+    "disk",
+    "crypt",
+    "control",
+    "uvm",
+    "server",
+    "factory",
+    "audit",
+    "kdev",
+    "swap",
+    "ata",
+    "launcher",
+    "glib",
+    "package",
+    "cfg",
+    "dhcp",
+    "http",
+    "inet",
+    "wpa",
+    "block",
+    "poller",
+]
 
-strict_ignore_list = ['md', 'mld', 'sh', 'gjs', 'cat', 'tor']
+strict_ignore_list = ["md", "mld", "sh", "gjs", "cat", "tor"]
 
 # --- Application Lists for Power Plan Detection ---
 BALANCE_APP_LIST = [
-    'vdf.gui',         # Video Comparer
-    'dupeguru',        # File duplicate finder
-    'celluloid',       # Media player
-    'mpv',             # Media player
-    'firefox',         # Web Browser
-    'chrome',          # Web Browser
-    'chromium',        # Web Browser
-    'brave',           # Web Browser
-    'opera',           # Web Browser
-    'vivaldi',         # Web Browser
-    'thunderbird',     # Email Client
-    'evolution',       # Email/Groupware Client
-    'soffice.bin',     # LibreOffice main process
-    'lowriter',        # LibreOffice Writer
-    'localc',          # LibreOffice Calc
-    'loimpress',       # LibreOffice Impress
-    'vlc',             # Media Player
-    'rhythmbox',       # Music Player
-    'spotify',         # Music Streaming
-    'slack',           # Communication
-    'discord',         # Communication
-    'telegram-desktop',# Communication
-    'nautilus',        # File Manager (GNOME)
-    'dolphin',         # File Manager (KDE)
-    'thunar',          # File Manager (XFCE)
-    'transmission-gtk',# Torrent Client
-    'qbittorrent',     # Torrent Client
-    'deluge',          # Torrent Client
-    'evince',          # Document Viewer (GNOME)
-    'okular',          # Document Viewer (KDE)
-    'zathura',         # Document Viewer
-    'eog',             # Image Viewer (Eye of GNOME)
-    'gwenview',        # Image Viewer (KDE)
-    'shotwell',        # Photo Manager
-    'darktable',       # Photo Workflow (can be intensive, but often manageable on balanced)
-    'rawtherapee',     # Photo Workflow (similar to darktable)
-    'audacity',        # Audio Editor (can be intensive, but often manageable)
-    'calibre',         # E-book Management
-    'keepassxc',       # Password Manager
-    'signal-desktop',  # Secure Messenger
+    "vdf.gui",  # Video Comparer
+    "dupeguru",  # File duplicate finder
+    "celluloid",  # Media player
+    "mpv",  # Media player
+    "firefox",  # Web Browser
+    "chrome",  # Web Browser
+    "chromium",  # Web Browser
+    "brave",  # Web Browser
+    "opera",  # Web Browser
+    "vivaldi",  # Web Browser
+    "thunderbird",  # Email Client
+    "evolution",  # Email/Groupware Client
+    "soffice.bin",  # LibreOffice main process
+    "lowriter",  # LibreOffice Writer
+    "localc",  # LibreOffice Calc
+    "loimpress",  # LibreOffice Impress
+    "vlc",  # Media Player
+    "rhythmbox",  # Music Player
+    "spotify",  # Music Streaming
+    "slack",  # Communication
+    "discord",  # Communication
+    "telegram-desktop",  # Communication
+    "nautilus",  # File Manager (GNOME)
+    "dolphin",  # File Manager (KDE)
+    "thunar",  # File Manager (XFCE)
+    "transmission-gtk",  # Torrent Client
+    "qbittorrent",  # Torrent Client
+    "deluge",  # Torrent Client
+    "evince",  # Document Viewer (GNOME)
+    "okular",  # Document Viewer (KDE)
+    "zathura",  # Document Viewer
+    "eog",  # Image Viewer (Eye of GNOME)
+    "gwenview",  # Image Viewer (KDE)
+    "shotwell",  # Photo Manager
+    "darktable",  # Photo Workflow (can be intensive, but often manageable on balanced)
+    "rawtherapee",  # Photo Workflow (similar to darktable)
+    "audacity",  # Audio Editor (can be intensive, but often manageable)
+    "calibre",  # E-book Management
+    "keepassxc",  # Password Manager
+    "signal-desktop",  # Secure Messenger
     # Add other common desktop applications as needed
 ]
 PERFORMANCE_APP_LIST = [
-    'vmware',          # Virtualization
-    'virtualbox',      # Virtualization
-    'qemu',            # Virtualization/Emulation
-    'steam',           # Gaming Platform
-    'lutris',          # Gaming Platform
-    'heroic',          # Gaming Platform
-    'zoom',            # Video Conferencing
-    'teams',           # Video Conferencing (Microsoft Teams)
-    'blender',         # 3D Modeling/Rendering
-    'kdenlive',        # Video Editing
-    'openshot',        # Video Editing
-    'resolve',         # Video Editing (DaVinci Resolve)
-    'premiere',        # Video Editing (Adobe Premiere - if running via Wine/Proton)
-    'gimp',            # Image Editing
-    'krita',           # Image Editing
-    'photoshop',       # Image Editing (Adobe Photoshop - if running via Wine/Proton)
-    'code',            # Development IDE (VS Code)
-    'pycharm',         # Development IDE
-    'idea',            # Development IDE (IntelliJ)
-    'android-studio',  # Development IDE
-    'obs',             # Streaming/Recording (OBS Studio)
-    'ardour',          # Digital Audio Workstation (Real-time audio)
-    'reaper',          # Digital Audio Workstation (Real-time audio - often via Wine)
-    'bitwig-studio',   # Digital Audio Workstation (Real-time audio)
-    'jackd',           # Real-time Audio Server
-    'carla',           # Audio Plugin Host (Real-time audio)
+    "vmware",  # Virtualization
+    "virtualbox",  # Virtualization
+    "qemu",  # Virtualization/Emulation
+    "steam",  # Gaming Platform
+    "lutris",  # Gaming Platform
+    "heroic",  # Gaming Platform
+    "zoom",  # Video Conferencing
+    "teams",  # Video Conferencing (Microsoft Teams)
+    "blender",  # 3D Modeling/Rendering
+    "kdenlive",  # Video Editing
+    "openshot",  # Video Editing
+    "resolve",  # Video Editing (DaVinci Resolve)
+    "premiere",  # Video Editing (Adobe Premiere - if running via Wine/Proton)
+    "gimp",  # Image Editing
+    "krita",  # Image Editing
+    "photoshop",  # Image Editing (Adobe Photoshop - if running via Wine/Proton)
+    "code",  # Development IDE (VS Code)
+    "pycharm",  # Development IDE
+    "idea",  # Development IDE (IntelliJ)
+    "android-studio",  # Development IDE
+    "obs",  # Streaming/Recording (OBS Studio)
+    "ardour",  # Digital Audio Workstation (Real-time audio)
+    "reaper",  # Digital Audio Workstation (Real-time audio - often via Wine)
+    "bitwig-studio",  # Digital Audio Workstation (Real-time audio)
+    "jackd",  # Real-time Audio Server
+    "carla",  # Audio Plugin Host (Real-time audio)
     # Add specific game executable names if needed, e.g., 'csgo_linux64'
     # Add scientific computing/simulation software if relevant, e.g., 'matlab'
 ]
@@ -140,16 +226,16 @@ def get_process_list() -> Set[str]:
 
     Returns:
         Set[str]: A set of filtered process names.
-        
+
     Raises:
         psutil.Error: If there's an issue iterating through processes.
     """
     process_set: Set[str] = set()
     # O(P) where P is the number of processes
-    for process in psutil.process_iter(['name']): # Request only name for efficiency
+    for process in psutil.process_iter(["name"]):  # Request only name for efficiency
         try:
             # Get process name
-            process_name = process.info['name'].lower()
+            process_name = process.info["name"].lower()
             process_set.add(process_name)
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             # Ignore processes that ended, are restricted, or are zombies
@@ -179,7 +265,7 @@ def detect_balance_apps(process_list: Set[str]) -> bool:
 
     Returns:
         bool: True if a balance-triggering app is found, False otherwise.
-        
+
     Complexity: O(B * P) where B is the number of balance apps and P is the average length of process names (string search).
                 Can be O(B) if process_list is a hash set and we do exact matches.
     """
@@ -187,7 +273,7 @@ def detect_balance_apps(process_list: Set[str]) -> bool:
     for app in BALANCE_APP_LIST:
         # Check for exact match first (more efficient if applicable)
         if app in process_list:
-             return True
+            return True
         # Optional: Check for substring match if needed (more expensive)
         # for process_name in process_list:
         #     if app in process_name:
@@ -204,7 +290,7 @@ def detect_performance_apps(process_list: Set[str]) -> bool:
 
     Returns:
         bool: True if a performance-triggering app is found, False otherwise.
-        
+
     Complexity: O(P * Q) where P is the number of performance apps and Q is the average length of process names (string search).
                 Can be O(P) if process_list is a hash set and we do exact matches.
     """
@@ -218,4 +304,3 @@ def detect_performance_apps(process_list: Set[str]) -> bool:
         #     if app in process_name:
         #         return True
     return False
-
