@@ -3,6 +3,7 @@ Unit tests for the color gradient utilities.
 
 Tests the gradient generation and color temperature mapping functions.
 """
+import sys
 import pytest
 import math
 import numpy as np
@@ -494,6 +495,22 @@ class TestCIELCHGradient:
         except ImportError:
             pytest.skip("colour-science library not installed")
     
+    def test_create_color_gradient_cielch_basic_without_colour_lib(self):
+        """Test that ImportError is handled when colour library is missing."""
+        # Test with red to blue gradient (high contrast)
+        start_rgb = [255, 0, 0]  # Red
+        end_rgb = [0, 0, 255]    # Blue
+        steps = 5
+        
+        # Temporarily remove the colour module or set to None
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            # Mock colour module as None to simulate it not being installed
+            monkeypatch.setitem(sys.modules, 'colour', None)
+            
+            # Should raise ImportError and not crash
+            with pytest.raises(ImportError):
+                gradient = create_color_gradient_cielch(start_rgb, end_rgb, steps)
+    
     def test_create_color_gradient_cielch_edge_cases(self):
         """Test edge cases for CIELCH-based color gradient generation."""
         try:
@@ -521,6 +538,38 @@ class TestCIELCHGradient:
         except ImportError:
             pytest.skip("colour-science library not installed")
     
+    def test_create_color_gradient_cielch_edge_cases_without_colour_lib(self):
+        """Test that ImportError is handled when colour library is missing."""
+        import vega_common.utils.color_gradient_utils as cgu
+        
+        start_rgb = [255, 0, 0]
+        end_rgb = [0, 0, 255]
+        
+        # Store original colour module reference from the module
+        original_colour = cgu.colour
+        
+        try:
+            # Set colour to None in the module to simulate it not being available
+            cgu.colour = None
+            
+            # Now when the function tries to use colour, it should raise ImportError
+            # We need to use steps > 2 to reach the code that uses the colour module
+            with pytest.raises(ImportError):
+                cgu.create_color_gradient_cielch(start_rgb, end_rgb, 3)
+                
+            # Test with other steps values
+            with pytest.raises(ImportError):
+                cgu.create_color_gradient_cielch(start_rgb, end_rgb, 5)
+            
+            # Test with invalid steps (should raise ValueError, not ImportError)
+            # ValueError is raised before the code reaches the part that would use the colour module
+            with pytest.raises(ValueError):
+                cgu.create_color_gradient_cielch(start_rgb, end_rgb, 0)
+                
+        finally:
+            # Restore the original colour module reference
+            cgu.colour = original_colour
+    
     def test_create_color_gradient_cielch_same_color(self):
         """Test gradient generation between identical colors."""
         try:
@@ -539,6 +588,20 @@ class TestCIELCHGradient:
                 
         except ImportError:
             pytest.skip("colour-science library not installed")
+    
+    def test_create_color_gradient_cielch_same_color_without_colour_lib(self):
+        """Test gradient generation between identical colors without colour library."""
+        color = [100, 150, 200]
+        steps = 5
+            
+        # Temporarily remove the colour module or set to None
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            # Mock colour module as None to simulate it not being installed
+            monkeypatch.setitem(sys.modules, 'colour', None)
+            
+            # Should raise ImportError
+            with pytest.raises(ImportError):
+                create_color_gradient_cielch(color, color.copy(), steps)
     
     def test_create_color_gradient_cielch_perceptual_uniformity(self):
         """Test that CIELCH gradient produces perceptually uniform steps."""
@@ -569,6 +632,21 @@ class TestCIELCHGradient:
                 
         except ImportError:
             pytest.skip("colour-science library not installed")
+    
+    def test_create_color_gradient_cielch_perceptual_uniformity_without_colour_lib(self):
+        """Test CIELCH gradient without colour library."""
+        black = [0, 0, 0]
+        white = [255, 255, 255]
+        steps = 7
+            
+        # Temporarily remove the colour module or set to None
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            # Mock colour module as None to simulate it not being installed
+            monkeypatch.setitem(sys.modules, 'colour', None)
+            
+            # Should raise ImportError
+            with pytest.raises(ImportError):
+                create_color_gradient_cielch(black, white, steps)
     
     def test_create_color_gradient_cielch_vs_hsv(self):
         """Compare CIELCH gradient with HSV gradient for perceptual smoothness."""
@@ -604,6 +682,25 @@ class TestCIELCHGradient:
         except ImportError:
             pytest.skip("colour-science library not installed")
     
+    def test_create_color_gradient_cielch_vs_hsv_without_colour_lib(self):
+        """Test CIELCH vs HSV gradient without colour library."""
+        bright_yellow = [255, 255, 0]  # High brightness
+        dark_blue = [0, 0, 128]       # Low brightness
+        steps = 7
+        
+        # Temporarily remove the colour module or set to None
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            # Mock colour module as None to simulate it not being installed
+            monkeypatch.setitem(sys.modules, 'colour', None)
+            
+            # Should raise ImportError for CIELCH gradient
+            with pytest.raises(ImportError):
+                cielch_gradient = create_color_gradient_cielch(bright_yellow, dark_blue, steps)
+            
+            # HSV gradient should still work
+            hsv_gradient = create_color_gradient(bright_yellow, dark_blue, steps)
+            assert len(hsv_gradient) == steps
+    
     def test_create_color_gradient_cielch_hue_wrapping(self):
         """Test CIELCH gradient with colors requiring hue wrapping."""
         try:
@@ -633,6 +730,21 @@ class TestCIELCHGradient:
                 
         except ImportError:
             pytest.skip("colour-science library not installed")
+    
+    def test_create_color_gradient_cielch_hue_wrapping_without_colour_lib(self):
+        """Test CIELCH gradient with hue wrapping without colour library."""
+        magenta = [255, 0, 255]  # Hue around 300
+        yellow = [255, 255, 0]   # Hue around 60
+        steps = 7
+        
+        # Temporarily remove the colour module or set to None
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            # Mock colour module as None to simulate it not being installed
+            monkeypatch.setitem(sys.modules, 'colour', None)
+            
+            # Should raise ImportError
+            with pytest.raises(ImportError):
+                gradient = create_color_gradient_cielch(magenta, yellow, steps)
     
     def test_create_color_gradient_cielch_out_of_gamut_handling(self):
         """Test handling of out-of-gamut colors in CIELCH gradient."""
@@ -673,6 +785,21 @@ class TestCIELCHGradient:
                 
         except ImportError:
             pytest.skip("colour-science library not installed")
+    
+    def test_create_color_gradient_cielch_out_of_gamut_handling_without_colour_lib(self):
+        """Test CIELCH gradient gamut handling without colour library."""
+        vivid_blue = [0, 0, 255]
+        vivid_green = [0, 255, 0]
+        steps = 7
+        
+        # Temporarily remove the colour module or set to None
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            # Mock colour module as None to simulate it not being installed
+            monkeypatch.setitem(sys.modules, 'colour', None)
+            
+            # Should raise ImportError
+            with pytest.raises(ImportError):
+                gradient = create_color_gradient_cielch(vivid_blue, vivid_green, steps)
     
     def test_create_color_gradient_cielch_error_handling(self):
         """Test error handling in CIELCH gradient function."""

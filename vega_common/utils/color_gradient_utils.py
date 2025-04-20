@@ -299,9 +299,9 @@ def create_color_gradient_cielch(
 
         end_lab = colour.XYZ_to_Lab(colour.sRGB_to_XYZ(end_rgb_norm))
         end_lch = colour.Lab_to_LCHab(end_lab)
-    except ImportError:
+    except (ImportError, AttributeError):
+        # Handle both ImportError (library not installed) and AttributeError (colour is None)
         raise ImportError("This function requires the 'colour-science' library. Install it using 'pip install colour-science'")
-
 
     # 4. Interpolate L*, C*, h*
     # Time Complexity: O(1) for setup
