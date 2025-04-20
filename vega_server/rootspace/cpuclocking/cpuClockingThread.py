@@ -20,8 +20,8 @@ def cpuclocking_thread(_):
     while True:
         try:
             powerplan = powerplan_switcher()
-            set_powerplan(powerplan['plan'])
-            time.sleep(powerplan['sleep'])
+            set_powerplan(powerplan["plan"])
+            time.sleep(powerplan["sleep"])
         except Exception as err:
             print(str(err) + " during clocking loop")
     return null

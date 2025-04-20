@@ -10,7 +10,7 @@ def set_powerplan(powerplan):
     try:
         cmd = [
             "echo {0}".format(powerplan),
-            "| tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+            "| tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor",
         ]
         sub_process.run_cmd(cmd)
     except Exception as err:

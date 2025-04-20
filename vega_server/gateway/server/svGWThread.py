@@ -14,9 +14,8 @@ def server_thread(_):
     Returns:
         null: simple thread with no returns
     """
-    host = socket.gethostname()   # get local machine name
+    host = socket.gethostname()  # get local machine name
     port = 9090  # > 1024 $$ <65535 range
     server_name = "GW Server"
 
-    start_server(host, port, server_name,
-                 globals.WC_DATA_IN_ROOT, globals.WC_DATA_IN_USER)
+    start_server(host, port, server_name, globals.WC_DATA_IN_ROOT, globals.WC_DATA_IN_USER)

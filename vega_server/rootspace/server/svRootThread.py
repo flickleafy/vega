@@ -14,7 +14,7 @@ def server_thread(_):
     Returns:
         null: simple thread with no returns
     """
-    host = socket.gethostname()   # get local machine name
+    host = socket.gethostname()  # get local machine name
     port = 9096  # > 1024 $$ <65535 range
     server_name = "Rootspace Server"
 

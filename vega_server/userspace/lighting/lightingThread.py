@@ -32,7 +32,7 @@ def lighting_thread(_):
                 try:
                     array_color = globals.WC_DATA_OUT[0]["array_color"]
                 except Exception as err:
-                    print('### Error reading global structure', err)
+                    print("### Error reading global structure", err)
                     continue
                 if isinstance(array_color, list):
                     set_device_color(device, array_color)
@@ -44,9 +44,10 @@ def lighting_thread(_):
             lightingStatus.init_lighting()
     return None
 
+
 def set_device_color(device, array_color):
     """Set the color for an RGB device with appropriate handling for device types.
-    
+
     Args:
         device: The OpenRGB device object to control
         array_color (list): RGB values as [r, g, b]
@@ -55,47 +56,46 @@ def set_device_color(device, array_color):
     # If not, return early to avoid unnecessary device updates
     if not color_not_changed(array_color):
         return
-    
+
     print("###")
-    print("### Setting device: " +
-          device.name + " color: " + str(array_color))
+    print("### Setting device: " + device.name + " color: " + str(array_color))
     print("###")
-    
+
     # Use small delay to avoid overwhelming the device controller
-    time.sleep(.15)
-    
+    time.sleep(0.15)
+
     # Special handling for AORUS motherboards which need color correction
-    if (device.type == DeviceType.MOTHERBOARD and "aorus" in device.name.lower()):
+    if device.type == DeviceType.MOTHERBOARD and "aorus" in device.name.lower():
         corrected_color = aorus_x470_hue_fix(array_color)
         rgb_color = rgb_to_rgbcolor(corrected_color)
     else:
         rgb_color = rgb_to_rgbcolor(array_color)
-    
+
     # Set the color on the device
     device.set_color(rgb_color)
-    
+
     # Some devices need an explicit update call
     if device.type != DeviceType.MOTHERBOARD:
-        time.sleep(.15)
+        time.sleep(0.15)
         device.update()
 
 
 def color_not_changed(array_color):
     """Check if the color has changed from the last update.
-    
+
     Uses a color signature approach to detect changes in RGB values.
-    
+
     Args:
         array_color (list): RGB color as [r, g, b]
-        
+
     Returns:
         bool: True if color has changed, False otherwise
     """
     # Calculate the color signature using common utility
     color_signature_current = calculate_color_signature(array_color)
-    
+
     if globals.COLOR_SIG_LAST and globals.COLOR_SIG_LAST == color_signature_current:
         return False
-        
+
     globals.COLOR_SIG_LAST = color_signature_current
     return True

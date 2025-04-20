@@ -1,7 +1,12 @@
 from liquidctl.util import color_from_str
 from vega_common.utils.color_utils import (
-    rgb_to_hsv, hsv_to_rgb, rgb_to_hex as rgb_to_hexa, normalize_color_value,
-    shift_hue, adjust_brightness, hex_to_rgb
+    rgb_to_hsv,
+    hsv_to_rgb,
+    rgb_to_hex as rgb_to_hexa,
+    normalize_color_value,
+    shift_hue,
+    adjust_brightness,
+    hex_to_rgb,
 )
 from vega_common.utils.hardware_rgb_profiles import aorus_x470_hue_fix
 
@@ -11,12 +16,12 @@ degree_max = 46.0
 
 def assign_degree_to_wavelength(degree: float) -> float:
     """Convert a temperature degree to a light wavelength value.
-    
+
     Maps temperature range (degree_min to degree_max) to wavelength range (380nm to 780nm).
-    
+
     Args:
         degree (float): Temperature in degrees Celsius
-        
+
     Returns:
         float: Corresponding wavelength in nanometers
     """
@@ -25,26 +30,25 @@ def assign_degree_to_wavelength(degree: float) -> float:
     wavel_max = 780
     wavel_range = wavel_max - wavel_min
 
-    if (degree <= degree_min):
+    if degree <= degree_min:
         degree = degree_min
-    if (degree >= degree_max):
+    if degree >= degree_max:
         degree = degree_max
 
-    wavelength = (((degree - degree_min) * wavel_range) /
-                  degree_range) + wavel_min
+    wavelength = (((degree - degree_min) * wavel_range) / degree_range) + wavel_min
 
     return wavelength
 
 
 def normalize_integer_color(intensity_max: int, factor: float, gamma: float, color: float) -> int:
     """Normalize a color intensity value with gamma correction.
-    
+
     Args:
         intensity_max (int): Maximum intensity value
         factor (float): Intensity factor
         gamma (float): Gamma correction value
         color (float): Color value to normalize
-        
+
     Returns:
         int: Normalized color value
     """
@@ -55,14 +59,14 @@ def normalize_integer_color(intensity_max: int, factor: float, gamma: float, col
 
 def wavel_to_rgb(wavelength: float, degree: float) -> str:
     """Convert wavelength to RGB color representation.
-    
-    Maps light wavelength to corresponding RGB color with intensity 
+
+    Maps light wavelength to corresponding RGB color with intensity
     adjustments based on human color perception.
-    
+
     Args:
         wavelength (float): Light wavelength in nanometers
         degree (float): Temperature in degrees Celsius
-        
+
     Returns:
         str: Hexadecimal RGB color string
     """
@@ -114,21 +118,21 @@ def wavel_to_rgb(wavelength: float, degree: float) -> str:
         factor = 0.3 + 0.7 * (780 - wavelength) / (780 - 700)
 
     # Further reduce intensity far vision limits
-    if (degree < degree_min):
+    if degree < degree_min:
         factor = (degree - 5) / 101
-    elif (degree > degree_max):
+    elif degree > degree_max:
         factor = (degree - 15) / 101
 
     factor = min(1.0, factor)
     factor = max(0.0, factor)
 
-    if (red != 0):
+    if red != 0:
         red = normalize_integer_color(intensity_max, factor, gamma, red)
 
-    if (green != 0):
+    if green != 0:
         green = normalize_integer_color(intensity_max, factor, gamma, green)
 
-    if (blue != 0):
+    if blue != 0:
         blue = normalize_integer_color(intensity_max, factor, gamma, blue)
 
     hexa_rgb = rgb_to_hexa(red, green, blue)
@@ -138,12 +142,12 @@ def wavel_to_rgb(wavelength: float, degree: float) -> str:
 
 def set_led_color(devices, index, wc_liquid_temp: float):
     """Set LED colors based on water cooling liquid temperature.
-    
+
     Args:
         devices (list): List of watercooler devices
         index (int): Index of the device to set color for
         wc_liquid_temp (float): Liquid temperature in degrees Celsius
-        
+
     Returns:
         list: RGB color values as [r, g, b]
     """
@@ -163,11 +167,11 @@ def set_led_color(devices, index, wc_liquid_temp: float):
 
 def increase_light(array_hsv: list, light: int) -> list:
     """Increase the light/value component in an HSV color.
-    
+
     Args:
         array_hsv (list): HSV values as a list [h, s, v]
         light (int): Amount to increase light by
-        
+
     Returns:
         list: Updated HSV values
     """
@@ -177,17 +181,18 @@ def increase_light(array_hsv: list, light: int) -> list:
 
 def normalize_integer(color: int, minimum: int, maximum: int) -> int:
     """Normalize an integer value to be within a specific range.
-    
+
     Args:
         color (int): Value to normalize
         minimum (int): Minimum allowed value
         maximum (int): Maximum allowed value
-        
+
     Returns:
         int: Normalized value
     """
     # Use normalize_color_value from common utilities
     return normalize_color_value(color, minimum, maximum)
+
 
 # The aorus_x470_hue_fix function has been moved to vega_common.utils.hardware_rgb_profiles
 # Use the imported function instead

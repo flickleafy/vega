@@ -1,152 +1,153 @@
 """
 Sliding window data structure for the Vega project.
 
-This module provides a fixed-size sliding window implementation for tracking 
+This module provides a fixed-size sliding window implementation for tracking
 time-series data such as temperatures, fan speeds, and other metrics that
 require historical context.
 """
+
 from typing import List, Union, TypeVar, Generic, Callable, Optional, Any
 import statistics
 from collections import deque
 import itertools
 import math  # Add math import
 
-T = TypeVar('T')  # Generic type for window elements
+T = TypeVar("T")  # Generic type for window elements
 
 
 class SlidingWindow(Generic[T]):
     """
     A fixed-size sliding window data structure.
-    
-    This class implements a fixed-size sliding window that efficiently manages 
+
+    This class implements a fixed-size sliding window that efficiently manages
     a collection of values with a maximum size, automatically removing the oldest
     entries when new ones are added beyond the capacity.
-    
+
     Attributes:
         capacity (int): Maximum number of elements the window can hold.
         window (deque): The underlying data structure storing the elements.
         default_value (T, optional): Default value used for initialization.
     """
-    
+
     def __init__(self, capacity: int, default_value: Optional[T] = None):
         """
         Initialize a new sliding window with the specified capacity.
-        
+
         Args:
             capacity (int): Maximum number of elements the window can hold.
             default_value (T, optional): Default value to pre-fill the window.
                 If provided, the window will be initialized with this value
                 repeated to fill the capacity. Defaults to None (empty window).
-        
+
         Raises:
             ValueError: If capacity is less than or equal to zero.
         """
         if capacity <= 0:
             raise ValueError("Sliding window capacity must be greater than zero")
-        
+
         self.capacity = capacity
         self.window = deque(maxlen=capacity)
-        
+
         # Pre-fill with default value if provided
         if default_value is not None:
             for _ in range(capacity):
                 self.window.append(default_value)
-    
+
     def add(self, value: T) -> None:
         """
         Add a new value to the sliding window.
-        
+
         If the window is at capacity, the oldest value will be removed.
-        
+
         Args:
             value (T): The value to add to the window.
         """
         self.window.append(value)
-    
+
     def get_values(self) -> List[T]:
         """
         Get all values currently in the window.
-        
+
         Returns:
             List[T]: A list containing all values in the window, ordered from oldest to newest.
         """
         return list(self.window)
-    
+
     def clear(self) -> None:
         """Clear all values from the window."""
         self.window.clear()
-    
+
     def is_empty(self) -> bool:
         """
         Check if the window is empty.
-        
+
         Returns:
             bool: True if the window contains no values, False otherwise.
         """
         return len(self.window) == 0
-    
+
     def is_full(self) -> bool:
         """
         Check if the window is at full capacity.
-        
+
         Returns:
             bool: True if the window contains the maximum number of values, False otherwise.
         """
         return len(self.window) == self.capacity
-    
+
     def get_size(self) -> int:
         """
         Get the current number of values in the window.
-        
+
         Returns:
             int: The number of values currently in the sliding window.
         """
         return len(self.window)
-    
+
     def get_capacity(self) -> int:
         """
         Get the maximum capacity of the window.
-        
+
         Returns:
             int: The maximum number of values the window can hold.
         """
         return self.capacity
-    
+
     def get_newest(self) -> Optional[T]:
         """
         Get the most recently added value.
-        
+
         Returns:
             T or None: The newest value in the window, or None if the window is empty.
         """
         if self.is_empty():
             return None
         return self.window[-1]
-    
+
     def get_oldest(self) -> Optional[T]:
         """
         Get the oldest value in the window.
-        
+
         Returns:
             T or None: The oldest value in the window, or None if the window is empty.
         """
         if self.is_empty():
             return None
         return self.window[0]
-    
+
     def __len__(self) -> int:
         """
         Get the current size of the window.
-        
+
         Returns:
             int: The number of values currently in the sliding window.
         """
         return len(self.window)
-    
+
     def __iter__(self):
         """
         Make the window iterable.
-        
+
         Returns:
             iterator: An iterator over the window values.
         """
@@ -160,8 +161,8 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
     This class extends the basic SlidingWindow to provide statistical operations
     like average, min, max, and standard deviation with O(1) retrieval complexity
     by maintaining aggregates incrementally.
-    
-    Include numeric aggregations that are commonly needed when tracking temperature, 
+
+    Include numeric aggregations that are commonly needed when tracking temperature,
     load, or other numeric time-series data.
     """
 
@@ -246,11 +247,11 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
     def fill(self, value: Union[int, float]) -> None:
         """
         Fill the window with the given value if it is currently empty.
-        
+
         This method efficiently populates the entire window capacity with the
         specified value, but only if the window contains no elements.
         If the window is not empty, this method does nothing.
-        
+
         Args:
             value (Union[int, float]): The numeric value to fill the window with.
         """
@@ -289,13 +290,12 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         self._max_deque.clear()  # O(1)
         self._index = 0  # Reset index
 
-
     def get_average(self) -> float:
         """
         Calculate the average of all values in the window.
 
         Complexity: O(1).
-        
+
         Returns:
             float: The mean of all values, or 0.0 if the window is empty.
         """
@@ -311,7 +311,7 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
 
         Complexity: O(N log N) due to sorting/selection.
         Optimization requires more complex data structures (e.g., balanced trees).
-        
+
         Returns:
             float: The median of all values, or 0.0 if the window is empty.
         """
@@ -326,7 +326,7 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         Get the maximum value in the window.
 
         Complexity: O(1).
-        
+
         Returns:
             int or float: The maximum value, or 0 if the window is empty.
         """
@@ -342,7 +342,7 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         Get the minimum value in the window.
 
         Complexity: O(1).
-        
+
         Returns:
             int or float: The minimum value, or 0 if the window is empty.
         """
@@ -358,19 +358,19 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         Get the sum of all values in the window.
 
         Complexity: O(1).
-        
+
         Returns:
             int or float: The sum of all values, or 0 if the window is empty.
         """
         return self._current_sum
-    
+
     def get_standard_deviation(self) -> float:
         """
         Calculate the sample standard deviation of values in the window.
         Uses the formula: sqrt( (N*sum_sq - sum*sum) / (N*(N-1)) ) for numerical stability.
 
         Complexity: O(1).
-        
+
         Returns:
             float: The standard deviation, or 0.0 if the window has fewer than 2 values.
         """
@@ -383,11 +383,11 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         # Or equivalently: (N*sum_sq - sum*sum) / (N*(N-1))
         sum_val = float(self._current_sum)
         sum_sq_val = float(self._current_sum_sq)
-        
+
         # Ensure non-negative variance due to potential floating point inaccuracies
         numerator = max(0.0, n * sum_sq_val - sum_val * sum_val)
         denominator = n * (n - 1)
-        
+
         if denominator <= 0:  # Should not happen if n >= 2, but safeguard
             return 0.0
 
@@ -400,14 +400,14 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
 
         Complexity: O(P) where P is the number of periods (P <= N).
         Optimization to O(1) requires maintaining partial sums, adding complexity.
-        
+
         Args:
             periods (int): The number of most recent values to include in the average.
                 Must be at least 1 and not more than the window size.
-        
+
         Returns:
             float: The average of the most recent 'periods' values, or 0.0 if no values.
-            
+
         Raises:
             ValueError: If periods is less than 1.
         """
@@ -420,11 +420,11 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         # Accessing last 'periods' elements from deque and summing
         n = len(self.window)  # O(1)
         actual_periods = min(periods, n)
-        
+
         # Slicing a deque creates a new list O(P)
         # Use islice for potentially better memory efficiency if P is large
         recent_values = list(itertools.islice(self.window, n - actual_periods, n))
-        
+
         # Summing is O(P)
         return sum(recent_values) / actual_periods
 
@@ -433,11 +433,11 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         Calculate a weighted average of values in the window.
 
         Complexity: O(N). Incremental updates are complex with sliding weights.
-        
+
         Args:
             weights (List[float], optional): The weight for each value, from oldest to newest.
                 If None, uses exponential weights favoring newer values. Defaults to None.
-                
+
         Returns:
             float: The weighted average, or 0.0 if the window is empty.
         """
@@ -450,11 +450,11 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
 
         if weights is None:
             # Generate exponential weights favoring newer values
-            effective_weights = [2 ** i for i in range(n)]  # O(N)
+            effective_weights = [2**i for i in range(n)]  # O(N)
         else:
             # Adjust weights list to match current window size
             if len(weights) >= n:
-                effective_weights = weights[len(weights)-n:]  # O(N) slice
+                effective_weights = weights[len(weights) - n :]  # O(N) slice
             else:  # Pad with first weight if too few weights provided
                 effective_weights = [weights[0]] * (n - len(weights)) + weights  # O(N)
 
@@ -471,10 +471,10 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
 
         Complexity: O(N). Requires accessing and averaging halves of the window.
         Optimization requires more complex tracking of partial sums.
-        
+
         The trend is calculated as the average of the second half minus
         the average of the first half, normalized by the overall average.
-        
+
         Returns:
             float: A value indicating the trend direction and magnitude.
                 Positive values indicate an upward trend, negative values a downward trend.
@@ -488,7 +488,7 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         # Convert deque to list for slicing O(N)
         values = list(self.window)
         midpoint = n // 2
-        
+
         # Slicing is O(N/2) = O(N)
         first_half = values[:midpoint]
         second_half = values[midpoint:]
@@ -496,7 +496,7 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         # statistics.mean is O(N/2) = O(N)
         first_avg = statistics.mean(first_half) if first_half else 0
         second_avg = statistics.mean(second_half) if second_half else 0
-        
+
         # get_average is O(1) now
         overall_avg = self.get_average()
 
