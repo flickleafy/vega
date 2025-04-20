@@ -8,7 +8,24 @@ It uses [liquidctl](https://github.com/liquidctl/liquidctl) as its basis for the
 It uses [openRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) for ligthing controlling for RAM, Motherboard, and couple other devices supported by openRGB.\
 It uses [nvidia-settings](_)/[nvidia-ml-py](https://pypi.org/project/nvidia-ml-py/) to controll gpu temperature and fans, and in the future, it is planned to controll other GPU parameters.
 
-### Installing Dependencies
+### System Dependencies
+
+Before installing Python packages, you need to install these system dependencies:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y libusb-1.0-0-dev libudev-dev libcairo2-dev pkg-config python3-dev libgirepository1.0-dev
+```
+
+These dependencies are required for:
+
+- **libcairo2-dev**: The Cairo graphics library development files needed for PyGObject
+- **pkg-config**: Required for detecting installed libraries
+- **python3-dev**: Python development headers for building extensions
+- **libgirepository1.0-dev**: GObject introspection development files
+- **libusb-1.0-0-dev** & **libudev-dev**: Required for liquidctl hardware access
+
+### Installing Python Dependencies
 
 The project dependencies are managed through a requirements.txt file. To install all required packages:
 
@@ -163,6 +180,7 @@ You can use the shared library in two ways:
 #### Utility Modules Highlights
 
 ##### Color Utilities
+
 ```python
 # Convert between color formats (RGB, HSV, HEX)
 rgb_color = [255, 0, 0]  # Red
@@ -175,6 +193,7 @@ brighter_color = adjust_brightness(hsv_color.copy(), 10)  # Increase brightness
 ```
 
 ##### Temperature Utilities
+
 ```python
 # Temperature conversion
 fahrenheit = celsius_to_fahrenheit(30)  # 86.0
