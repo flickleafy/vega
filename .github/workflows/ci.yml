@@ -24,22 +24,39 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          # Install complete set of dependencies for building PyGObject
+          # Install GObject Introspection first to ensure it's available
+          sudo apt-get install -y libgirepository1.0-dev
+          # Verify girepository-2.0.pc is installed and found by pkg-config
+          pkg-config --exists girepository-2.0 || echo "ERROR: girepository-2.0.pc not found"
+          pkg-config --modversion girepository-2.0 || echo "ERROR: Cannot get girepository-2.0 version"
+          ls -la /usr/lib/*/pkgconfig/girepository-2.0.pc || echo "ERROR: Cannot find girepository-2.0.pc file"
+
+          # Now install other dependencies
           sudo apt-get install -y \
-            libusb-1.0-0-dev \
-            libudev-dev \
             libcairo2-dev \
+            libglib2.0-dev \
+            gir1.2-gtk-3.0 \
             pkg-config \
             python3-dev \
-            libgirepository1.0-dev \
-            gir1.2-gtk-3.0 \
-            libcairo2 \
-            libglib2.0-dev \
-            gobject-introspection
+            gobject-introspection \
+            libusb-1.0-0-dev \
+            libudev-dev
+
+      - name: Debug environment
+        run: |
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+          export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig
+          echo "Updated PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+          pkg-config --list-all | grep -i gir
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+
+          # Install PyGObject with verbose output
+          pip install PyGObject --verbose
+
+          # Now install the rest of the requirements
           pip install -r requirements.txt
           pip install -e ./vega_common
 
