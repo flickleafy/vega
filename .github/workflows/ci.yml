@@ -25,7 +25,7 @@ jobs:
         run: |
           sudo apt-get update
           # Install GObject Introspection first to ensure it's available
-          sudo apt-get install -y libgirepository1.0-dev
+          sudo apt-get install -y libgirepository1.0-dev libcairo2-dev libglib2.0-dev gir1.2-gtk-3.0 pkg-config python3-dev gobject-introspection libusb-1.0-0-dev libudev-dev
           # Verify girepository-2.0.pc is installed and found by pkg-config
           pkg-config --exists girepository-2.0 || echo "ERROR: girepository-2.0.pc not found"
           pkg-config --modversion girepository-2.0 || echo "ERROR: Cannot get girepository-2.0 version"
@@ -43,11 +43,13 @@ jobs:
             libudev-dev
 
       - name: Debug environment
+        continue-on-error: true
         run: |
+          export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-          export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig
-          echo "Updated PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-          pkg-config --list-all | grep -i gir
+          pkg-config --exists girepository-2.0 || echo "ERROR: girepository-2.0.pc not found"
+          pkg-config --modversion girepository-2.0 || echo "ERROR: Cannot get girepository-2.0 version"
+          ls -la /usr/lib/x86_64-linux-gnu/pkgconfig/girepository-2.0.pc || echo "ERROR: Cannot find girepository-2.0.pc file"
 
       - name: Install dependencies
         run: |
