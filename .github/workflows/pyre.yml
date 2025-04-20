@@ -48,7 +48,7 @@ jobs:
           sudo apt-get install -y libgirepository1.0-dev libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0 libglib2.0-dev
 
       - name: Run Pyre
-        uses: facebook/pyre-action@v4
+        uses: facebook/pyre-action@60697a7858f7cc8470d8cc494a3cf2ad6b06560d
         with:
           # To customize these inputs:
           # See https://github.com/facebook/pyre-action#inputs
