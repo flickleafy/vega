@@ -1,0 +1,28 @@
+# .github/actions/setup-system-deps/action.yml
+name: 'Setup System Dependencies'
+description: 'Installs common system dependencies required for the project (Python 3.10 on Ubuntu 22.04)'
+runs:
+  using: 'composite'
+  steps:
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        echo "Updating package list..."
+        sudo apt-get update -qq
+        # Install essential build tools and GObject Introspection dependencies
+        echo "Installing system dependencies..."
+        sudo apt-get install -y --no-install-recommends \
+          pkg-config \
+          libcairo2-dev \
+          libgirepository1.0-dev \
+          libglib2.0-dev \
+          gir1.2-gtk-3.0 \
+          python3-dev \
+          gobject-introspection \
+          libusb-1.0-0-dev \
+          libudev-dev \
+          python3-gi \
+          python3-cairo
+        echo "Cleaning up apt cache..."
+        sudo rm -rf /var/lib/apt/lists/*
+        echo "System dependencies installed."
