@@ -171,13 +171,15 @@ class TestSafeOpen(TestFileManipulation):
 
     def test_exception_inside_context(self):
         """Test that file is closed even if an exception occurs inside the context manager."""
+        f = None  # Initialize f to handle potential assignment errors
         try:
             with safe_open(self.test_file_path, "r") as f:
                 raise ValueError("Test exception")
         except ValueError:
-            pass
+            pass  # Expected exception
 
-        # The file should be closed at this point
+        # The file should be closed at this point, even if an exception occurred inside 'with'
+        assert f is not None, "File handle 'f' should have been assigned."
         assert f.closed
 
 
