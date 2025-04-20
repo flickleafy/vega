@@ -19,6 +19,6 @@ find . -name "*.pyo" -delete
 
 # Run the tests
 echo "Running tests..."
-python -m pytest "$@"
+python -m pytest --runperf "$@"
 
 echo "=== Test execution completed ==="

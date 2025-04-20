@@ -18,12 +18,12 @@ rm -rf htmlcov/
 
 # Run tests with coverage
 echo "Running tests with coverage analysis..."
-python -m pytest --cov=vega_common --cov=vega_server --cov=vega_client --cov-report=term-missing "$@"
+python -m pytest --runperf --cov=vega_common --cov=vega_server --cov=vega_client --cov-report=term-missing "$@"
 
 # Generate HTML report if no arguments provided
 if [ $# -eq 0 ]; then
     echo "Generating HTML coverage report..."
-    python -m pytest --cov=vega_common --cov=vega_server --cov=vega_client --cov-report=html
+    python -m pytest --runperf --cov=vega_common --cov=vega_server --cov=vega_client --cov-report=html
     echo "HTML coverage report generated in htmlcov/ directory"
 fi
 
