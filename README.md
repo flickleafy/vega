@@ -14,15 +14,27 @@ Before installing Python packages, you need to install these system dependencies
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y libusb-1.0-0-dev libudev-dev libcairo2-dev pkg-config python3-dev libgirepository1.0-dev
+sudo apt-get install -y \
+  libusb-1.0-0-dev \
+  libudev-dev \
+  libcairo2-dev \
+  pkg-config \
+  python3-dev \
+  libgirepository1.0-dev \
+  gir1.2-gtk-3.0 \
+  libcairo2 \
+  libglib2.0-dev \
+  gobject-introspection
 ```
 
 These dependencies are required for:
 
-- **libcairo2-dev**: The Cairo graphics library development files needed for PyGObject
+- **libgirepository1.0-dev** & **gobject-introspection**: GObject introspection development files needed for PyGObject
+- **libcairo2-dev** & **libcairo2**: Cairo graphics library needed for PyGObject
+- **libglib2.0-dev**: GLib development files for PyGObject
+- **gir1.2-gtk-3.0**: GTK bindings for Python
 - **pkg-config**: Required for detecting installed libraries
 - **python3-dev**: Python development headers for building extensions
-- **libgirepository1.0-dev**: GObject introspection development files
 - **libusb-1.0-0-dev** & **libudev-dev**: Required for liquidctl hardware access
 
 ### Installing Python Dependencies

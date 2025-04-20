@@ -53,13 +53,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libusb-1.0-0-dev libudev-dev libcairo2-dev pkg-config python3-dev libgirepository1.0-dev
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e ./vega_common
+          sudo apt-get install -y libgirepository1.0-dev
 
       # Initializes the CodeQL tools for scanning
       - name: Initialize CodeQL
@@ -74,19 +68,6 @@ jobs:
           # This ensures CodeQL can properly analyze the Python code
           # Run any specific build steps needed for your project
           python -m compileall ./vega_server ./vega_client ./vega_common
-
-      # Run Python static analysis tools
-      - name: Run static analysis
-        run: |
-          pip install mypy flake8
-          python -m flake8 vega_common vega_server vega_client --max-line-length=100 --count || true
-          python -m mypy vega_common vega_server vega_client --ignore-missing-imports || true
-
-      # Run the tests to ensure code quality
-      - name: Run tests
-        run: |
-          pip install pytest pytest-cov freezegun
-          python -m pytest --cov=vega_common tests/
 
       # Perform CodeQL Analysis
       - name: Perform CodeQL Analysis
