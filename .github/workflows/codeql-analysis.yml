@@ -75,9 +75,26 @@ jobs:
         with:
           category: '/language:${{ matrix.language }}'
 
-      # Upload SARIF results to GitHub
-      - name: Upload SARIF results
+      # Transform SARIF to a simpler JSON format using jq
+      - name: Transform SARIF to Readable JSON
+        id: transform_sarif
+        run: |
+          # Ensure jq is installed (often pre-installed on ubuntu-latest)
+          # sudo apt-get update && sudo apt-get install -y jq
+          SARIF_FILE="/home/runner/work/vega/results/python.sarif"
+          OUTPUT_JSON="codeql-results-readable.json"
+          echo "Transforming $SARIF_FILE to $OUTPUT_JSON..."
+          # Basic jq query to extract key fields. Adjust as needed.
+          # Handles cases where results might be empty or null.
+          jq '[ .runs[0].results[]? | select(. != null) | { rule: .ruleId, severity: .level, message: .message.text, file: .locations[0].physicalLocation.artifactLocation.uri // "N/A", line: .locations[0].physicalLocation.region.startLine // "N/A" } ]' "$SARIF_FILE" > "$OUTPUT_JSON"
+          echo "Transformation complete. Output file: $OUTPUT_JSON"
+          # Set output path for the artifact upload step
+          echo "output_path=$OUTPUT_JSON" >> $GITHUB_OUTPUT
+        shell: bash
+
+      # Upload the transformed readable JSON results
+      - name: Upload Readable JSON Results
         uses: actions/upload-artifact@v4
         with:
-          name: CodeQL Results
-          path: /home/runner/work/vega/results/python.sarif
+          name: CodeQL Readable Results (JSON)
+          path: ${{ steps.transform_sarif.outputs.output_path }}
