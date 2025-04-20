@@ -273,7 +273,8 @@ class TestSetupLogging:
             # Path with non-existent parent directories
             log_path = os.path.join(temp_dir, "new_dir", "deeper", "app.log")
 
-            # Patch both os.makedirs and handlers.RotatingFileHandler to isolate directory creation logic
+            # Patch both os.makedirs and handlers.RotatingFileHandler to isolate
+            # directory creation logic
             with patch("os.makedirs") as mock_makedirs:
                 with patch("logging.handlers.RotatingFileHandler") as mock_handler:
                     mock_handler.return_value = (
@@ -319,7 +320,8 @@ class TestSetupLogging:
                         mock_root_logger = MagicMock()
                         mock_get_logger.side_effect = [mock_root_logger, mock_logger]
 
-                        # Should still create a logger with console handler even if file handler fails
+                        # Should still create a logger with console handler even if file handler
+                        # fails
                         result = setup_logging(log_file=log_path)
 
                         # Verify at least console handler was added

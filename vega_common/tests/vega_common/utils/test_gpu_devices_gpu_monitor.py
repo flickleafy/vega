@@ -66,25 +66,27 @@ def mock_pynvml():
 
         mock.NVMLError = MockNVMLError
 
-        # Important: Actually increment counter when init is called - this makes tests for _initialize_nvml_safe work
+        # Important: Actually increment counter when init is called - this makes
+        # tests for _initialize_nvml_safe work
         original_init = _initialize_nvml_safe
 
         def nvml_init():
             global _nvml_init_count
             try:
                 _nvml_init_count += 1
-            except:
+            except BaseException:
                 pass
 
         mock.nvmlInit.side_effect = nvml_init
 
-        # Important: Actually decrement counter when shutdown is called - this makes tests for _shutdown_nvml_safe work
+        # Important: Actually decrement counter when shutdown is called - this
+        # makes tests for _shutdown_nvml_safe work
         def nvml_shutdown():
             global _nvml_init_count
             try:
                 if _nvml_init_count > 0:
                     _nvml_init_count -= 1
-            except:
+            except BaseException:
                 pass
 
         mock.nvmlShutdown.side_effect = nvml_shutdown
@@ -193,7 +195,8 @@ class TestNvidiaGpuMonitor:
 
         # Apply our mock implementation
         with patch.object(NvidiaGpuMonitor, "__init__", mock_init):
-            # Act & Assert - Now when we create a monitor with invalid index, our mock will behave like the real code
+            # Act & Assert - Now when we create a monitor with invalid index, our mock
+            # will behave like the real code
             with pytest.raises(ValueError, match="Invalid device_index 5"):
                 NvidiaGpuMonitor(5)  # This should trigger the ValueError in our mock
 
@@ -424,7 +427,8 @@ class TestNvidiaGpuMonitor:
         # Assert - Properties should be marked with error
         monitor.status.update_property.assert_any_call("temperature", None, is_error=True)
 
-        # Check that error was logged - more flexible assertion since the exact call count might vary
+        # Check that error was logged - more flexible assertion since the exact
+        # call count might vary
         assert mock_logging.error.called, "Error logging should occur for unexpected exceptions"
 
     def test_update_status_no_fans(self, mock_pynvml, mock_device_monitor):

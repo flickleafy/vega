@@ -454,7 +454,7 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         else:
             # Adjust weights list to match current window size
             if len(weights) >= n:
-                effective_weights = weights[len(weights) - n :]  # O(N) slice
+                effective_weights = weights[len(weights) - n:]  # O(N) slice
             else:  # Pad with first weight if too few weights provided
                 effective_weights = [weights[0]] * (n - len(weights)) + weights  # O(N)
 

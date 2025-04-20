@@ -5,13 +5,6 @@ This module provides color correction and transformation functions tailored to
 specific hardware RGB implementations across different devices.
 """
 
-from typing import List
-import warnings
-
-# Suppress the warning about Matplotlib not being available
-# since we only use the color conversion functionality, not visualization
-warnings.filterwarnings("ignore", message=".*related API features are not available.*")
-
 from vega_common.utils.color_utils import (
     rgb_to_hsv,
     hsv_to_rgb,
@@ -21,6 +14,12 @@ from vega_common.utils.color_utils import (
     normalize_rgb_values,
     RGBColor,
 )
+from typing import List
+import warnings
+
+# Suppress the warning about Matplotlib not being available
+# since we only use the color conversion functionality, not visualization
+warnings.filterwarnings("ignore", message=".*related API features are not available.*")
 
 
 def aorus_x470_hue_fix(array_rgb: List[int]) -> List[int]:

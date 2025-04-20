@@ -1223,7 +1223,8 @@ class TestHelperFunctions:
         assert calculate_color_distance([255, 0, 0], [0, 255, 0]) > 230
 
         # Test perceptual weighting
-        # According to the actual implementation, changes in different channels produce different perceptual distances
+        # According to the actual implementation, changes in different channels
+        # produce different perceptual distances
         d1 = calculate_color_distance([100, 100, 100], [100, 120, 100])  # Green change
         d2 = calculate_color_distance([100, 100, 100], [100, 100, 120])  # Blue change
         d3 = calculate_color_distance([100, 100, 100], [120, 100, 100])  # Red change

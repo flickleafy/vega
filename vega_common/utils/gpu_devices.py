@@ -282,7 +282,8 @@ class NvidiaGpuMonitor(DeviceMonitor):
                         # If we have fewer than 2 fans, mark fan_speed_2 as None but not an error
                         self.status.update_property("fan_speed_2", None, is_error=False)
 
-                    # Handle fan_speed_1 if no fans at all (this case shouldn't actually happen with the new structure)
+                    # Handle fan_speed_1 if no fans at all (this case shouldn't actually
+                    # happen with the new structure)
                     if num_fans < 1:
                         self.status.update_property("fan_speed_1", None, is_error=False)
 

@@ -122,7 +122,8 @@ class CpuController(DeviceController):
             return False
 
         # Construct the command using tee. This often requires root privileges.
-        # Assuming sub_process.run_cmd handles permissions (e.g., runs as root or uses sudo internally).
+        # Assuming sub_process.run_cmd handles permissions (e.g., runs as root or
+        # uses sudo internally).
         cmd_str = f"echo {plan} | tee {ALL_CPU_GOVERNOR_PATH}"
 
         logging.debug(f"CPU Controller ({self.device_id}): Running command: {cmd_str}")
@@ -250,7 +251,8 @@ class CpuController(DeviceController):
                 # --- Trend influence (only if cool and no specific apps) ---
                 # O(1) comparisons
                 if trend == "rising":
-                    # Become slightly more responsive if temp is rising from cool state, will verify next loop for powerplan change
+                    # Become slightly more responsive if temp is rising from cool state, will
+                    # verify next loop for powerplan change
                     sleep = max(5, sleep // 2)  # Halve sleep, min 5s
                     logging.debug(
                         f"CPU Controller ({self.device_id}): Temp cool, trend rising. Current powerplan: {powerplan}. Shortening sleep to {sleep}s."
@@ -531,7 +533,8 @@ class CpuMonitor(DeviceMonitor):
                 for device_name in self.cpu_temp_device_names:
                     if device_name in all_temps:
                         sensors = all_temps[device_name]
-                        # Don't sort by label preference - just take the first one available from each device
+                        # Don't sort by label preference - just take the first one available from
+                        # each device
                         if sensors:  # Make sure there's at least one sensor
                             sensor = sensors[0]  # Take the first sensor
                             cpu_temp = sensor.current

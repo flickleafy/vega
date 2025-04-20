@@ -113,7 +113,7 @@ class TestIsOlderThan:
         """Test is_older_than with an older datetime."""
         older_time = datetime(2023, 1, 15, 12, 33, 56)  # 1 minute older
         result = is_older_than(older_time, 30)  # 30 seconds threshold
-        assert result == True
+        assert result
 
     @freeze_time("2023-01-15 12:34:56")
     def test_newer_datetime(self):
@@ -128,7 +128,7 @@ class TestIsOlderThan:
         current_timestamp = int(datetime(2023, 1, 15, 12, 34, 56).timestamp())
         older_timestamp = current_timestamp - 60  # 60 seconds older
         result = is_older_than(older_timestamp, 30)  # 30 seconds threshold
-        assert result == True
+        assert result
 
     @freeze_time("2023-01-15 12:34:56")
     def test_newer_timestamp(self):

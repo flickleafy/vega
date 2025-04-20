@@ -6,6 +6,15 @@ including temperature-based gradients, rainbow gradients, and perceptually
 uniform gradients using CIELCH color space.
 """
 
+from vega_common.utils.color_utils import (
+    rgb_to_hsv,
+    hsv_to_rgb,
+    shift_hue,
+    adjust_brightness,
+    normalize_color_value,
+    normalize_rgb_values,
+    RGBColor,
+)
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 import math
@@ -20,16 +29,6 @@ try:
     import colour
 except ImportError:
     colour = None
-
-from vega_common.utils.color_utils import (
-    rgb_to_hsv,
-    hsv_to_rgb,
-    shift_hue,
-    adjust_brightness,
-    normalize_color_value,
-    normalize_rgb_values,
-    RGBColor,
-)
 
 
 def create_color_gradient(start_rgb: List[int], end_rgb: List[int], steps: int) -> List[List[int]]:
@@ -153,17 +152,29 @@ def _is_rgb_in_gamut(rgb_norm: np.ndarray, tolerance: float = 1e-7) -> bool:
     return np.all((rgb_norm >= 0 - tolerance) & (rgb_norm <= 1 + tolerance))
 
 
-# TODO: Graceful Fallback: When the colour-science library is not available, the function currently raises an ImportError. It could potentially fall back to the HSV-based create_color_gradient function.
+# TODO: Graceful Fallback: When the colour-science library is not
+# available, the function currently raises an ImportError. It could
+# potentially fall back to the HSV-based create_color_gradient function.
 
-# TODO: Caching: Color conversions are computationally expensive but deterministic. Frequently used conversions could be cached for performance improvements.
+# TODO: Caching: Color conversions are computationally expensive but
+# deterministic. Frequently used conversions could be cached for
+# performance improvements.
 
-# TODO: Parameterized Interpolation: Currently uses linear interpolation; could be extended to support different easing functions for more creative gradients.
+# TODO: Parameterized Interpolation: Currently uses linear interpolation;
+# could be extended to support different easing functions for more
+# creative gradients.
 
-# TODO: Memory Optimization: The implementation creates several intermediate arrays. For very large gradients, a more memory-efficient approach could be beneficial.
+# TODO: Memory Optimization: The implementation creates several
+# intermediate arrays. For very large gradients, a more memory-efficient
+# approach could be beneficial.
 
-# TODO: Alternative Gamut Mapping: While the binary search approach is good, more advanced gamut mapping algorithms exist that could produce even better results in edge cases.
+# TODO: Alternative Gamut Mapping: While the binary search approach is
+# good, more advanced gamut mapping algorithms exist that could produce
+# even better results in edge cases.
 
-# TODO: Easing Functions: Currently, the implementation uses linear interpolation in CIELCH space. Supporting different easing functions (e.g., ease-in, ease-out) could provide creative control for designers.
+# TODO: Easing Functions: Currently, the implementation uses linear
+# interpolation in CIELCH space. Supporting different easing functions
+# (e.g., ease-in, ease-out) could provide creative control for designers.
 
 
 def _map_to_srgb_gamut(
