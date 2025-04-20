@@ -80,8 +80,8 @@ def watercooler_thread(_):
             return None
 
     # --- Initialize Sliding Windows ---
-    wc_temp_window = NumericSlidingWindow(size=TEMPERATURE_WINDOW_SIZE)
-    cpu_temp_window = NumericSlidingWindow(size=TEMPERATURE_WINDOW_SIZE)
+    wc_temp_window = NumericSlidingWindow(capacity=TEMPERATURE_WINDOW_SIZE)
+    cpu_temp_window = NumericSlidingWindow(capacity=TEMPERATURE_WINDOW_SIZE)
 
     try:
         if device_manager.get_monitors():

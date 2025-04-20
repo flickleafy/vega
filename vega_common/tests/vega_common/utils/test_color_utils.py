@@ -451,6 +451,7 @@ class TestColorManipulation:
         hsv = [0, 100, 50]  # Medium-bright red
         original = hsv.copy()
         adjusted = adjust_brightness(hsv, 25)
+        assert adjusted == [0, 100, 75]
         assert hsv == original  # Original should be unchanged
 
     def test_brightness_adjustment_edge_cases(self):
