@@ -54,3 +54,9 @@ jobs:
           # See https://github.com/facebook/pyre-action#inputs
           repo-directory: './'
           requirements-path: 'requirements.txt'
+
+      - name: Upload Pyre Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: pyre-results
+          path: '.pyre'
