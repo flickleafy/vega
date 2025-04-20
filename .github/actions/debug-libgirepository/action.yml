@@ -1,0 +1,20 @@
+# .github/actions/debug-libgirepository/action.yml
+name: 'Check pkg-config setup'
+description: 'Debugs pkg-config setup for libgirepository by checking versions, paths, and installed packages.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Check pkg-config setup
+      shell: bash
+      run: |
+        echo "--- Checking pkg-config for girepository ---"
+        pkg-config --modversion gobject-introspection-1.0 || echo "gobject-introspection-1.0 not found by pkg-config"
+        pkg-config --exists girepository-1.0 && echo "Found girepository-1.0.pc" || echo "girepository-1.0.pc not found"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+        echo "--- Listing potential pkgconfig directories ---"
+        ls -d /usr/lib/*/pkgconfig || echo "No standard pkgconfig dirs found"
+        ls -d /usr/share/pkgconfig || echo "/usr/share/pkgconfig not found"
+        echo "--- Finding girepository pc files ---"
+        sudo find /usr -name "girepository*.pc" || echo "No girepository*.pc files found in /usr"
+        echo "--- Checking installed libgirepository packages ---"
+        dpkg -l | grep libgirepository || echo "No libgirepository packages found via dpkg"
