@@ -6,17 +6,23 @@ import lighting.lightingStatus as lightingStatus
 from openrgb.utils import RGBColor
 from openrgb.utils import DeviceType
 
-from lighting.lightingColor import aorus_x470_hue_fix
+from vega_common.utils.hardware_rgb_profiles import aorus_x470_hue_fix
+from vega_common.utils.color_utils import calculate_color_signature
+from vega_common.utils.color_utils import rgb_to_rgbcolor
 
 
 def lighting_thread(_):
-    """_summary_
+    """Monitor and control device lighting based on temperature data.
+
+    This thread continuously updates connected RGB devices with colors
+    based on temperature data. Supports various RGB device types with
+    special handling for specific devices like AORUS motherboards.
 
     Args:
-        _ (_type_): _description_
+        _ (int): Unused argument, maintained for thread function signature consistency.
 
     Returns:
-        null: simple thread with no returns
+        None: This thread runs continuously.
     """
 
     devices = lightingStatus.init_lighting()
@@ -26,7 +32,7 @@ def lighting_thread(_):
                 try:
                     array_color = globals.WC_DATA_OUT[0]["array_color"]
                 except Exception as err:
-                    print('### Error reading global structure', err)
+                    print("### Error reading global structure", err)
                     continue
                 if isinstance(array_color, list):
                     set_device_color(device, array_color)
@@ -36,41 +42,60 @@ def lighting_thread(_):
             print(str(e) + " during main loop")
             print("Trying to reconnect...")
             lightingStatus.init_lighting()
-    return null
+    return None
 
 
 def set_device_color(device, array_color):
+    """Set the color for an RGB device with appropriate handling for device types.
+
+    Args:
+        device: The OpenRGB device object to control
+        array_color (list): RGB values as [r, g, b]
+    """
+    # Check if the color has actually changed since the last update
+    # If not, return early to avoid unnecessary device updates
+    if not color_not_changed(array_color):
+        return
+
     print("###")
-    print("### Setting device: " +
-          device.name + " color: " + str(array_color))
+    print("### Setting device: " + device.name + " color: " + str(array_color))
     print("###")
-    time.sleep(.15)
-    red = array_color[0]
-    green = array_color[1]
-    blue = array_color[2]
-    if (device.type == DeviceType.MOTHERBOARD):
-        if "aorus" in device.name.lower():
-            set_aorus_color(device, array_color)
-        device.set_color(RGBColor(red, green, blue))
+
+    # Use small delay to avoid overwhelming the device controller
+    time.sleep(0.15)
+
+    # Special handling for AORUS motherboards which need color correction
+    if device.type == DeviceType.MOTHERBOARD and "aorus" in device.name.lower():
+        corrected_color = aorus_x470_hue_fix(array_color)
+        rgb_color = rgb_to_rgbcolor(corrected_color)
     else:
-        device.set_color(RGBColor(red, green, blue))
-        time.sleep(.15)
+        rgb_color = rgb_to_rgbcolor(array_color)
+
+    # Set the color on the device
+    device.set_color(rgb_color)
+
+    # Some devices need an explicit update call
+    if device.type != DeviceType.MOTHERBOARD:
+        time.sleep(0.15)
         device.update()
 
 
 def color_not_changed(array_color):
-    if globals.COLOR_SIG_LAST:
-        color_signature_current = array_color[0] + \
-            array_color[1] + array_color[2]
-        if globals.COLOR_SIG_LAST == color_signature_current:
-            return False
-    globals.COLOR_SIG_LAST = array_color[0] + array_color[1] + array_color[2]
+    """Check if the color has changed from the last update.
+
+    Uses a color signature approach to detect changes in RGB values.
+
+    Args:
+        array_color (list): RGB color as [r, g, b]
+
+    Returns:
+        bool: True if color has changed, False otherwise
+    """
+    # Calculate the color signature using common utility
+    color_signature_current = calculate_color_signature(array_color)
+
+    if globals.COLOR_SIG_LAST and globals.COLOR_SIG_LAST == color_signature_current:
+        return False
+
+    globals.COLOR_SIG_LAST = color_signature_current
     return True
-
-
-def set_aorus_color(device, array_color):
-    new_array_color = aorus_x470_hue_fix(array_color)
-    red2 = new_array_color[0]
-    green2 = new_array_color[1]
-    blue2 = new_array_color[2]
-    device.set_color(RGBColor(red2, green2, blue2))

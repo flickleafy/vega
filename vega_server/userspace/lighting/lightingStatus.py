@@ -17,19 +17,19 @@ def init_lighting():
             time.sleep(3)
             continue
     # try:
-        # cooler = cli.get_devices_by_type(DeviceType.COOLER)[0]
+    # cooler = cli.get_devices_by_type(DeviceType.COOLER)[0]
     # except IndexError:
-        # cooler = False
+    # cooler = False
     # try:
-        # gpu = cli.get_devices_by_type(DeviceType.GPU)[0]
+    # gpu = cli.get_devices_by_type(DeviceType.GPU)[0]
     # except IndexError:
-        # gpu = False
+    # gpu = False
     print("###")
     print("### Getting OpenRGB devices")
     print("###")
-    time.sleep(.15)
+    time.sleep(0.15)
     open_rgb.update()
-    time.sleep(.15)
+    time.sleep(0.15)
     rams = open_rgb.get_devices_by_type(DeviceType.DRAM)
     motherboard = open_rgb.get_devices_by_type(DeviceType.MOTHERBOARD)
     devices = rams + motherboard
@@ -37,14 +37,14 @@ def init_lighting():
     for device in devices:
         print("### Reseting device " + device.name)
         print("###")
-        time.sleep(.15)
+        time.sleep(0.15)
         device.clear()
-        time.sleep(.15)
-        if 'corsair dominator platinum' in device.name.lower():
+        time.sleep(0.15)
+        if "corsair dominator platinum" in device.name.lower():
             device.set_mode("direct")
         else:
             device.set_mode("off")
-            time.sleep(.15)
+            time.sleep(0.15)
             device.set_mode("static")
 
     # To make sure the devices are in the right mode, and to work around a problem

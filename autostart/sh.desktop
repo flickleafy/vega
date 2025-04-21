@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Exec=/home/xxx/Documents/vega-client
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name[en_US]=Vega Client
+Name=Vega Client
+Comment[en_US]=
+Comment=

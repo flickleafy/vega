@@ -1,4 +1,3 @@
-
 def list_average(list):
     """_summary_
 

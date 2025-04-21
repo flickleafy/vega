@@ -1,54 +1,16 @@
-import psutil
+"""
+Process listing utilities for the rootspace component.
 
-ignore_list = ['cryptd', 'btrfs', 'kworker', 'kthreadd',
-               'systemd', 'mount', 'napi', 'sleep', 'rcu',
-               'nvidia', 'slub', 'netns', 'migration',
-               'idle', 'sudo', 'cpu', 'irq', 'vfio', 'acpi',
-               'zswap', 'ipv6', 'nvme', 'charger', 'watchdog',
-               'postgres', 'docker', 'kernel', 'container',
-               'libvirt', 'preload', 'session', 'gdm', 'python',
-               'daemon', 'queue', 'bluetooth', 'scsi', 'raid',
-               'mongo', 'node', 'registry', 'gvfsd', 'gnome',
-               'shell', 'identity', 'redis', 'pipewire', 'dnsmasq',
-               'iprt', 'cron', 'snapd', 'php', 'xorg', 'pihole',
-               'master', 'notify', 'nacl', 'ksmd', 'tracker',
-               'modem', 'network', 'agent', 'bash', 'integrity',
-               'pulse', 'java', 'crash', 'ibus', 'dbus', 'snyk',
-               'dconf', 'gsd', 'qmgr', 'clam', 'volume', 'monitor',
-               'tray', 'power', 'compact', 'sys', 'color', 'notifier',
-               'xdg', 'store', 'disk', 'crypt', 'control', 'uvm',
-               'server', 'factory', 'audit', 'kdev', 'swap', 'ata',
-               'launcher', 'glib', 'package', 'cfg', 'dhcp', 'http',
-               'inet', 'wpa', 'block', 'poller']
+This module re-exports process listing functions from the vega_common library
+to maintain backward compatibility while reducing code duplication.
+"""
 
-strict_ignore_list = ['md', 'mld', 'sh', 'gjs', 'cat', 'tor']
+# Import functions from the new common location
+from vega_common.utils.process_utils import get_process_list, similar_string_list
 
+# Re-export for backward compatibility if needed, or remove this file
+# if all consumers can be updated directly.
 
-def get_process_list():
-    process_set = set()
-    # Iterate over all running process
-    for process in psutil.process_iter():
-        try:
-            # Get process name
-            process_name = process.name().lower()
-            process_set.add(process_name)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
-
-    filtered_process_set = set()
-
-    for process_name in process_set:
-        if not similar_string_list(process_name, ignore_list, strict_ignore_list):
-            filtered_process_set.add(process_name)
-
-    return filtered_process_set
-
-
-def similar_string_list(string, list, strict_list):
-    for ref_str in list:
-        if ref_str in string:
-            return True
-    for ref_str in strict_list:
-        if ref_str == string:
-            return True
-    return False
+# The original content is removed as the functions are now in vega_common.
+# If strict backward compatibility is needed, keep the re-exports:
+# __all__ = ['get_process_list', 'similar_string_list']

@@ -1,6 +1,6 @@
 from utils.processList import get_process_list
 
-app_list = ['vdf.gui', 'dupeguru', 'celluloid', 'mpv']
+app_list = ["vdf.gui", "dupeguru", "celluloid", "mpv"]
 
 
 def detect_balance_apps(process_list):

@@ -2,7 +2,7 @@ import socket
 import time
 
 import json
-from utils.datetime import get_current_time
+from vega_common.utils.datetime_utils import get_current_time
 
 
 def start_server(address, port, server_name, send_data):
@@ -24,7 +24,7 @@ def start_server(address, port, server_name, send_data):
                 print(f"An error occurred: {e}")
 
             server_socket.listen(1)
-            print(server_name, ' started. Waiting for connections...')
+            print(server_name, " started. Waiting for connections...")
 
             connection, addr = server_socket.accept()
             print(f"Connection from {address}")
@@ -49,11 +49,10 @@ def data_transfer_loop(connection, send_data):
                 print("Connection lost. Trying to reconnect...")
                 return False
 
-            json_data_in = json_data_in.decode('utf-8')
+            json_data_in = json_data_in.decode("utf-8")
             json_data_out = json.dumps(send_data[0])
-            print(get_current_time() +
-                  "Sending to gateway server: ", str(json_data_out))
-            connection.sendall(str(json_data_out).encode('utf-8'))
+            print(get_current_time() + "Sending to gateway server: ", str(json_data_out))
+            connection.sendall(str(json_data_out).encode("utf-8"))
         except Exception as e:
             print(f"An error occurred in data transfer: {e}")
             return False

@@ -15,11 +15,11 @@ def get_wc_status(devices, index):
     Returns:
         _type_: _description_
     """
-    device_status = ''
-    
+    device_status = ""
+
     device = devices[index]
     device_status = device.get_status()
-    
+
     return device_status
 
 
