@@ -1,4 +1,3 @@
-
 def parse_sections(lines):
     sections = []
     start = None

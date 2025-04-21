@@ -1,32 +1,23 @@
+"""
+Temperature to fan speed conversion functions for CPU watercooling.
 
-def degree_to_speed(degree):
-    """_summary_
+This module provides functionality to convert CPU/liquid temperature readings to
+appropriate fan speed settings for optimal cooling.
+"""
+
+from vega_common.utils.temperature_utils import (
+    cpu_temp_to_fan_speed as common_cpu_temp_to_fan_speed,
+)
+
+
+def degree_to_speed(degree: float) -> int:
+    """
+    Convert CPU/liquid temperature to fan speed percentage.
 
     Args:
-        degree (_type_): _description_
+        degree (float): CPU or liquid temperature in degrees Celsius
 
     Returns:
-        _type_: _description_
+        int: Fan speed percentage (0-100)
     """
-    speed = 0
-
-    # NOSONAR
-    # if degree <= 40:
-    #     speed = round(degree + 1.5)
-
-    # elif (degree > 40) and (degree <= 55):
-    #     speed = round(degree * (1 + (0.025 * (degree - 40))))
-    #     speed = min(100, speed)
-
-    # elif (degree > 55) and (degree <= 60):
-    #     speed = round(degree * 1.6)
-    #     speed = min(100, speed)
-
-    # else:
-    #     speed = 100
-
-    speed = round((6 * degree) - 200)
-    speed = min(100, speed)
-    speed = max(0, speed)
-
-    return speed
+    return common_cpu_temp_to_fan_speed(degree)

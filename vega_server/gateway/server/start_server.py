@@ -2,7 +2,7 @@ import socket
 import time
 import threading
 import json
-from utils.datetime import get_current_time
+from vega_common.utils.datetime_utils import get_current_time
 
 
 def start_server(address, port, server_name, send_data_1, send_data_2):
@@ -16,8 +16,9 @@ def start_server(address, port, server_name, send_data_1, send_data_2):
         while True:
             connection, addr = server_socket.accept()
             print(f"Connection from {addr}")
-            client_thread = threading.Thread(target=handle_client, args=(
-                connection, addr, send_data_1, send_data_2))
+            client_thread = threading.Thread(
+                target=handle_client, args=(connection, addr, send_data_1, send_data_2)
+            )
             client_thread.daemon = True  # Optional: make client threads daemon threads
             client_thread.start()
 
@@ -46,8 +47,8 @@ def data_transfer_loop(connection, send_data_1, send_data_2):
             print("Connection lost.")
             break  # Exit loop and function, leading to thread termination
 
-        json_data_in = json_data_in.decode('utf-8')
+        json_data_in = json_data_in.decode("utf-8")
         json_data_out = json.dumps({**send_data_1[0], **send_data_2[0]})
         print(get_current_time() + "Sending to client: ", str(json_data_out))
-        connection.sendall(json_data_out.encode('utf-8'))
+        connection.sendall(json_data_out.encode("utf-8"))
         time.sleep(3)
