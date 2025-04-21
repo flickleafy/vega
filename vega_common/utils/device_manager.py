@@ -1,8 +1,8 @@
 from vega_common.utils.device_controller import DeviceController
 from vega_common.utils.device_monitor import DeviceMonitor
+from vega_common.utils.device_status import DeviceStatus
 
-
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 
 class DeviceManager:
@@ -52,33 +52,51 @@ class DeviceManager:
         for monitor in self.monitors.values():
             monitor.stop_monitoring()
 
-    def get_device_status(self, device_type: str, device_id: str) -> Optional[Dict[str, Any]]:
+    def get_monitors_by_type(self, device_type: str) -> List[DeviceMonitor]:
         """
-        Get the status of a specific device.
+        Get all monitors of a specific device type.
 
         Args:
-            device_type (str): Type of the device.
+            device_type (str): The type of device monitors to retrieve.
+
+        Returns:
+            List[DeviceMonitor]: List of device monitors matching the specified type.
+            
+        Time complexity: O(N) where N is the number of registered monitors.
+        """
+        return [
+            monitor 
+            for key, monitor in self.monitors.items() 
+            if monitor.device_type == device_type
+        ]
+
+    def get_device_status(self, device_id: str) -> Optional[DeviceStatus]:
+        """
+        Get the status of a specific device by its ID.
+
+        Args:
             device_id (str): ID of the device.
 
         Returns:
-            Optional[Dict[str, Any]]: Status dictionary or None if device not found.
+            Optional[DeviceStatus]: Device status object or None if device not found.
+            
+        Time complexity: O(N) where N is the number of registered monitors.
         """
-        device_key = f"{device_type}:{device_id}"
-        if device_key in self.monitors:
-            return self.monitors[device_key].get_status_dict()
+        for monitor in self.monitors.values():
+            if monitor.device_id == device_id:
+                return monitor.status
         return None
 
-    def get_all_status(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_statuses(self) -> List[DeviceStatus]:
         """
         Get the status of all monitored devices.
 
         Returns:
-            Dict[str, Dict[str, Any]]: Dictionary of device statuses, keyed by device identifier.
+            List[DeviceStatus]: List of device status objects.
+            
+        Time complexity: O(N) where N is the number of registered monitors.
         """
-        result = {}
-        for device_key, monitor in self.monitors.items():
-            result[device_key] = monitor.get_status_dict()
-        return result
+        return [monitor.status for monitor in self.monitors.values()]
 
     def apply_device_settings(
         self, device_type: str, device_id: str, settings: Dict[str, Any]
@@ -93,6 +111,8 @@ class DeviceManager:
 
         Returns:
             bool: True if settings were successfully applied, False otherwise.
+            
+        Time complexity: O(1) for dictionary lookup plus the complexity of apply_settings().
         """
         device_key = f"{device_type}:{device_id}"
         if device_key in self.controllers:

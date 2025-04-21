@@ -102,8 +102,7 @@ class CpuController(DeviceController):
         # Complexity depends on sub_process.run_cmd, likely O(P) where P is process execution time
         try:
             cmd_to_run = command if not use_shell else " ".join(command)
-            # Assuming run_cmd accepts use_shell argument
-            result = sub_process.run_cmd(cmd_to_run, use_shell=use_shell)
+            result = sub_process.run_cmd(cmd_to_run, shell=use_shell)
             return result.strip() if result else None
         except Exception as e:
             logging.error(
