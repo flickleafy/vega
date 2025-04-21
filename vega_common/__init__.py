@@ -103,7 +103,7 @@ from vega_common.utils.sliding_window import SlidingWindow, NumericSlidingWindow
 # Import process utilities
 from vega_common.utils.process_utils import get_process_list, similar_string_list
 
-__version__ = "0.1.0"
+__version__ = "0.1.5"
 __author__ = "Vega Team"
 
 # Add new utils to __all__ if defining it, otherwise they are exported by default

@@ -245,57 +245,6 @@ def average_temperatures(temperatures: List[float], discard_outliers: bool = Fal
     return sum(temperatures) / len(temperatures)
 
 
-def calculate_temperature_trend(
-    recent_temps: List[float], window_size: int = 5
-) -> Tuple[float, str]:
-    """
-    Calculate the temperature trend based on recent temperature readings.
-
-    Args:
-        recent_temps (List[float]): List of recent temperature readings
-        window_size (int, optional): Size of the window to consider for trend analysis.
-                                   Defaults to 5.
-
-    Returns:
-        Tuple[float, str]: A tuple containing:
-            - The rate of change per sample (degrees per sample)
-            - A string indicating the trend direction: "rising", "falling", or "stable"
-    """
-    if len(recent_temps) < 2:
-        return 0.0, "stable"
-
-    # Use only the last 'window_size' samples
-    temps_to_analyze = (
-        recent_temps[-window_size:] if len(recent_temps) > window_size else recent_temps
-    )
-
-    # Simple linear regression to find trend
-    n = len(temps_to_analyze)
-    indices = list(range(n))
-
-    # Calculate means
-    mean_x = sum(indices) / n
-    mean_y = sum(temps_to_analyze) / n
-
-    # Calculate slope using least squares method
-    numerator = sum((i - mean_x) * (t - mean_y) for i, t in enumerate(temps_to_analyze))
-    denominator = sum((i - mean_x) ** 2 for i in indices)
-
-    # Avoid division by zero
-    if denominator == 0:
-        return 0.0, "stable"
-
-    slope = numerator / denominator
-
-    # Determine trend direction
-    if abs(slope) < 0.2:  # Threshold for "stable" - may need adjustment
-        trend = "stable"
-    elif slope > 0:
-        trend = "rising"
-    else:
-        trend = "falling"
-
-    return slope, trend
 
 
 def create_temperature_window(size: int = 10, initial_value: float = 0) -> SlidingWindow:

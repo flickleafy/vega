@@ -58,7 +58,7 @@ def cpuclocking_thread(_):
         # Main monitoring and control loop
         while True:
             # Get latest CPU status
-            cpu_status = device_manager.get_device_status("cpu_main")
+            cpu_status = device_manager.get_device_status(device_id="cpu_main")
             
             if cpu_status:
                 # Get current CPU temperature
