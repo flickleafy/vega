@@ -8,6 +8,7 @@ Handles initialization and threading of the various server components.
 # Add the project root directory to Python path
 import os
 import sys
+
 # Get the absolute path of the project root directory (two levels up from this file)
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if project_root not in sys.path:

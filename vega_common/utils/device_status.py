@@ -2,7 +2,7 @@ from vega_common.utils.sliding_window import NumericSlidingWindow
 
 
 from datetime import datetime
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Tuple, Union, Optional
 
 
 class DeviceStatus:
@@ -36,6 +36,7 @@ class DeviceStatus:
         self.status_properties = {}
         self.last_update = datetime.now()
         self.status_history = {}
+        self.history_size = history_size
         # Store error messages by property name
         self.errors: Dict[str, str] = {}
 
@@ -79,11 +80,10 @@ class DeviceStatus:
             default_value (Union[int, float, None], optional): Default value to initialize history.
                 Defaults to 0. If None, no default values will be added.
         """
+        # TODO: implement alternative for non numerical properties
         if property_name not in self.status_history:
-            # Use a window of size 10 to match test_tracking_properties expectations
-            window_size = 10
             self.status_history[property_name] = NumericSlidingWindow(
-                window_size, default_value=default_value
+                self.history_size, default_value=default_value
             )
 
     def get_property_average(self, property_name: str, default: float = 0.0) -> float:
@@ -99,7 +99,11 @@ class DeviceStatus:
             float: The average property value or default if not tracked.
         """
         if property_name in self.status_history and len(self.status_history[property_name]) > 0:
-            return self.status_history[property_name].get_average()
+            if isinstance(self.status_history[property_name], NumericSlidingWindow):
+                sliding_window: NumericSlidingWindow = self.status_history[property_name]
+                return sliding_window.get_average()
+            else:
+                return default
         return default
 
     def get_property_history(self, property_name: str) -> List[Union[int, float]]:
@@ -115,6 +119,29 @@ class DeviceStatus:
         if property_name in self.status_history:
             return self.status_history[property_name].get_values()
         return []
+
+    def get_property_trend(
+        self, property_name: str, default: Tuple[float, str] = (0.0, "unknown")
+    ) -> Tuple[float, str]:
+        """
+        Get the trend information of a tracked property from its history.
+
+        Args:
+            property_name (str): Name of the property to retrieve trend for.
+            default (Tuple[float, str], optional): Default value if the property isn't tracked
+                or doesn't support trend analysis. Defaults to (0.0, 'unknown').
+
+        Returns:
+            Tuple[float, str]: A tuple containing the rate of change and the trend direction
+                ("rising", "falling", or "stable"). Returns the default tuple if property isn't tracked.
+        """
+        if property_name in self.status_history and len(self.status_history[property_name]) > 0:
+            if isinstance(self.status_history[property_name], NumericSlidingWindow):
+                sliding_window: NumericSlidingWindow = self.status_history[property_name]
+                return sliding_window.get_trend_and_rate()
+            else:
+                return default
+        return default
 
     def to_dict(self) -> Dict[str, Any]:
         """
