@@ -64,7 +64,9 @@ def gpu_thread(_):
                         device_manager.register_monitor(monitor)
                         device_manager.register_controller(controller)
 
-                        gpu_temp_windows[monitor.device_id] = NumericSlidingWindow(capacity=TEMPERATURE_WINDOW_SIZE)
+                        gpu_temp_windows[monitor.device_id] = NumericSlidingWindow(
+                            capacity=TEMPERATURE_WINDOW_SIZE
+                        )
                         gpu_controllers[monitor.device_id] = (
                             controller  # Store controller for easy access
                         )
@@ -117,7 +119,9 @@ def gpu_thread(_):
                 if device_id not in gpu_temp_windows:
                     # Should not happen if registration was successful, but handle defensively
                     logging.error(f"Temperature window not found for GPU {device_id}. Recreating.")
-                    gpu_temp_windows[device_id] = NumericSlidingWindow(capacity=TEMPERATURE_WINDOW_SIZE)
+                    gpu_temp_windows[device_id] = NumericSlidingWindow(
+                        capacity=TEMPERATURE_WINDOW_SIZE
+                    )
 
                 window = gpu_temp_windows[device_id]
                 window.fill(gpu_temp)  # Fill window if it's new/empty
