@@ -71,7 +71,7 @@ def decode_string(byte_string: Union[bytes, str]) -> str:
 
     Returns:
         str: The decoded string.
-        
+
     Time complexity: O(n) where n is the length of the string.
     """
     if isinstance(byte_string, bytes):
@@ -107,7 +107,7 @@ class NvidiaGpuMonitor(DeviceMonitor):
 
     Provides temperature, utilization, fan speed, and other metrics.
     """
-    
+
     def __init__(self, device_index: int, monitoring_interval: float = 3.0):
         """
         Initialize the NVIDIA GPU monitor.
@@ -577,7 +577,6 @@ class NvidiaGpuController(DeviceController):
         # Complexity: O(1)
         _shutdown_nvml_safe()
         logging.info(f"Cleaned up controller for {self.device_id}")
-
 
 
 # Example usage (for testing purposes, would normally be used by DeviceManager)

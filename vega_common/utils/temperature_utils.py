@@ -245,8 +245,6 @@ def average_temperatures(temperatures: List[float], discard_outliers: bool = Fal
     return sum(temperatures) / len(temperatures)
 
 
-
-
 def create_temperature_window(size: int = 10, initial_value: float = 0) -> SlidingWindow:
     """
     Create a sliding window specifically for temperature values.
