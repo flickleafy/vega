@@ -62,11 +62,13 @@ class TestGradientFunctions:
         # that traverses clockwise through the color wheel (through green, cyan, blue)
         # rather than the shortest path
         mid_color_hsv = rgb_to_hsv(wrap_gradient[1])
-        
+
         # The middle color should have a hue that's approximately 150° (cyan/green)
         # since we're interpolating from 0° to 300° and taking 150° as the middle
-        assert 120 < mid_color_hsv[0] < 180, f"Hue should be around 150 degrees, got {mid_color_hsv[0]}"
-        
+        assert (
+            120 < mid_color_hsv[0] < 180
+        ), f"Hue should be around 150 degrees, got {mid_color_hsv[0]}"
+
         # Both saturation and value should be 100% as per the implementation
         assert mid_color_hsv[1] > 95, f"Saturation should be close to 100, got {mid_color_hsv[1]}"
         assert mid_color_hsv[2] > 95, f"Value should be close to 100, got {mid_color_hsv[2]}"
