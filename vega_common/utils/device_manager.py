@@ -61,13 +61,11 @@ class DeviceManager:
 
         Returns:
             List[DeviceMonitor]: List of device monitors matching the specified type.
-            
+
         Time complexity: O(N) where N is the number of registered monitors.
         """
         return [
-            monitor 
-            for key, monitor in self.monitors.items() 
-            if monitor.device_type == device_type
+            monitor for key, monitor in self.monitors.items() if monitor.device_type == device_type
         ]
 
     def get_device_status(self, device_id: str) -> Optional[DeviceStatus]:
@@ -79,7 +77,7 @@ class DeviceManager:
 
         Returns:
             Optional[DeviceStatus]: Device status object or None if device not found.
-            
+
         Time complexity: O(N) where N is the number of registered monitors.
         """
         for monitor in self.monitors.values():
@@ -93,7 +91,7 @@ class DeviceManager:
 
         Returns:
             List[DeviceStatus]: List of device status objects.
-            
+
         Time complexity: O(N) where N is the number of registered monitors.
         """
         return [monitor.status for monitor in self.monitors.values()]
@@ -111,7 +109,7 @@ class DeviceManager:
 
         Returns:
             bool: True if settings were successfully applied, False otherwise.
-            
+
         Time complexity: O(1) for dictionary lookup plus the complexity of apply_settings().
         """
         device_key = f"{device_type}:{device_id}"

@@ -4,7 +4,7 @@ Concrete implementation for monitoring CPU metrics using psutil.
 
 import logging
 import sys
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any, Tuple, Union
 
 # Import psutil conditionally based on platform
 try:
@@ -90,10 +90,12 @@ ALL_CPU_GOVERNOR_PATH = (
 class CpuController(DeviceController):
     """Controller for CPU properties like power plan (governor)."""
 
-    def __init__(self, device_id: str = "cpu_main"):
+    def __init__(self, device_id: str = "cpu_main", device_name: str = "Unknown CPU"):
         """Initialize the CPU controller."""
         # O(1) complexity
-        super().__init__(device_id=device_id, device_type="cpu")  # Removed device_name parameter
+        super().__init__(
+            device_id=device_id, device_name=device_name, device_type="cpu"
+        )  # Removed device_name parameter
         logging.info(f"Initialized controller for CPU (ID: {self.device_id})")
         # No complex initialization needed like NVML
 
@@ -417,6 +419,7 @@ class CpuMonitor(DeviceMonitor):
     def __init__(
         self,
         device_id: str = "cpu_main",
+        device_name: str = "Unknown CPU",
         monitoring_interval: float = 5.0,
         cpu_temp_sensor_labels: Optional[List[str]] = None,
         cpu_temp_device_names: Optional[List[str]] = None,
@@ -434,9 +437,10 @@ class CpuMonitor(DeviceMonitor):
         """
         super().__init__(
             device_id=device_id,
+            device_name=device_name,
             device_type="cpu",
             monitoring_interval=monitoring_interval,
-            tracked_properties=["temperature"],  # Track temperature history
+            tracked_properties=["temperature"],  # Track temperature history in DeviceMonitor Class
         )
 
         # O(1) initialization complexity
@@ -584,6 +588,20 @@ class CpuMonitor(DeviceMonitor):
         """
         # O(1) access
         return self.status.get_property("temperature")
+
+    def get_cpu_temperature_history(self) -> Optional[float]:
+        """Convenience method to get the latest CPU temperature.
+        Complexity: O(1)
+        """
+        # O(1) access
+        return self.status.get_property_history("temperature")
+
+    def get_cpu_temperature_trend(self) -> Optional[Tuple[float, str]]:
+        """Convenience method to get the latest CPU temperature.
+        Complexity: O(1)
+        """
+        # O(1) access
+        return self.status.get_property_trend("temperature")
 
     def cleanup(self):
         """Release resources used by the CPU monitor.
