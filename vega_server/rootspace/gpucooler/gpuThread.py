@@ -39,6 +39,7 @@ def gpu_thread(_):
     device_manager = DeviceManager()
     gpu_temp_windows: Dict[str, NumericSlidingWindow] = {}
     gpu_controllers: Dict[str, NvidiaGpuController] = {}
+    gpu_index_map: Dict[str, int] = {}  # Maps device_id (PCI bus ID) to simple index (0, 1, ...)
 
     try:
         # Initial GPU configuration (consider moving this)
@@ -64,10 +65,13 @@ def gpu_thread(_):
                         device_manager.register_monitor(monitor)
                         device_manager.register_controller(controller)
 
-                        gpu_temp_windows[monitor.device_id] = NumericSlidingWindow(capacity=TEMPERATURE_WINDOW_SIZE)
+                        gpu_temp_windows[monitor.device_id] = NumericSlidingWindow(
+                            capacity=TEMPERATURE_WINDOW_SIZE
+                        )
                         gpu_controllers[monitor.device_id] = (
                             controller  # Store controller for easy access
                         )
+                        gpu_index_map[monitor.device_id] = i  # Map device_id to simple index
 
                         logging.info(
                             f"Registered monitor and controller for GPU {i} (ID: {monitor.device_id})"
@@ -108,7 +112,7 @@ def gpu_thread(_):
                 # --- Temperature Reading and Averaging ---
                 gpu_temp = status.get_property("temperature")
 
-                if gpu_temp is None or status.is_error("temperature"):
+                if gpu_temp is None or status.has_error("temperature"):
                     logging.warning(
                         f"No valid temperature reading for GPU {device_id}. Skipping control."
                     )
@@ -117,7 +121,9 @@ def gpu_thread(_):
                 if device_id not in gpu_temp_windows:
                     # Should not happen if registration was successful, but handle defensively
                     logging.error(f"Temperature window not found for GPU {device_id}. Recreating.")
-                    gpu_temp_windows[device_id] = NumericSlidingWindow(capacity=TEMPERATURE_WINDOW_SIZE)
+                    gpu_temp_windows[device_id] = NumericSlidingWindow(
+                        capacity=TEMPERATURE_WINDOW_SIZE
+                    )
 
                 window = gpu_temp_windows[device_id]
                 window.fill(gpu_temp)  # Fill window if it's new/empty
@@ -157,19 +163,19 @@ def gpu_thread(_):
                 )
 
                 # Update global state (similar to previous logic)
-                # Ensure keys match expected format if other parts rely on it
-                gpu_index_str = device_id.split("_")[-1]  # Assuming ID format like 'nvidia_gpu_0'
-                globals.WC_DATA_OUT[0][f"gpu{gpu_index_str}_degree"] = round(gpu_temp, 1)
-                globals.WC_DATA_OUT[0][f"gpu{gpu_index_str}_average_degree"] = round(
+                # Use simple numeric index (0, 1, ...) for keys to match client expectations
+                gpu_index = gpu_index_map.get(device_id, 0)
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_degree"] = round(gpu_temp, 1)
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_average_degree"] = round(
                     gpu_average_degree, 1
                 )
-                globals.WC_DATA_OUT[0][f"gpu{gpu_index_str}_c_fan_speed1"] = current_fan1
-                globals.WC_DATA_OUT[0][f"gpu{gpu_index_str}_c_fan_speed2"] = current_fan2
-                globals.WC_DATA_OUT[0][f"gpu{gpu_index_str}_s_fan_speed1"] = speed_fan0
-                globals.WC_DATA_OUT[0][f"gpu{gpu_index_str}_s_fan_speed2"] = speed_fan1
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_c_fan_speed1"] = current_fan1
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_c_fan_speed2"] = current_fan2
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_s_fan_speed1"] = speed_fan0
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_s_fan_speed2"] = speed_fan1
                 # Add other properties if needed, e.g., name, utilization
-                globals.WC_DATA_OUT[0][f"gpu{gpu_index_str}_name"] = status.device_name
-                # globals.WC_DATA_OUT[0][f"gpu{gpu_index_str}_id"] = device_id # PCI ID
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_name"] = status.device_name
+                # globals.WC_DATA_OUT[0][f"gpu{gpu_index}_id"] = device_id # PCI ID
 
             # Wait before next cycle
             time.sleep(3)  # Keep the 3-second interval

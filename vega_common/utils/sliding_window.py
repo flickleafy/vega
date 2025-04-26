@@ -6,7 +6,7 @@ time-series data such as temperatures, fan speeds, and other metrics that
 require historical context.
 """
 
-from typing import List, Union, TypeVar, Generic, Callable, Optional, Any
+from typing import List, Tuple, Union, TypeVar, Generic, Callable, Optional, Any
 import statistics
 from collections import deque
 import itertools
@@ -454,7 +454,7 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
         else:
             # Adjust weights list to match current window size
             if len(weights) >= n:
-                effective_weights = weights[len(weights) - n:]  # O(N) slice
+                effective_weights = weights[len(weights) - n :]  # O(N) slice
             else:  # Pad with first weight if too few weights provided
                 effective_weights = [weights[0]] * (n - len(weights)) + weights  # O(N)
 
@@ -480,7 +480,6 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
                 Positive values indicate an upward trend, negative values a downward trend.
                 Returns 0.0 if fewer than 2 values are in the window.
         """
-        # Implementation remains the same as before (O(N))
         n = len(self.window)  # O(1)
         if n < 2:
             return 0.0
@@ -507,3 +506,54 @@ class NumericSlidingWindow(SlidingWindow[Union[int, float]]):
 
         # Calculate normalized trend O(1)
         return (second_avg - first_avg) / overall_avg
+
+    def get_trend_and_rate(self, threshold: float = 0.2) -> Tuple[float, str]:
+        """
+        Calculate the temperature trend and rate of change based on window data.
+
+        Uses linear regression to determine the slope (rate of change per sample)
+        and classifies the trend direction based on the slope.
+
+        Args:
+            threshold (float, optional): Threshold below which the trend is considered
+                                        "stable". Defaults to 0.2.
+
+        Returns:
+            Tuple[float, str]: A tuple containing:
+                - The rate of change per sample (measured in units per sample)
+                - A string indicating the trend direction: "rising", "falling", or "stable"
+
+        Time complexity: O(N) where N is the current window size.
+        """
+        n = len(self.window)
+        if n < 2:
+            return 0.0, "stable"  # Need at least 2 points for a trend
+
+        # Convert window to list for analysis
+        values = list(self.window)
+        indices = list(range(n))
+
+        # Calculate means (centroids)
+        mean_x = sum(indices) / n  # O(N)
+        mean_y = sum(values) / n  # O(N)
+
+        # Calculate linear regression slope using least squares method
+        # Complexity: O(N) for the sum operations
+        numerator = sum((i - mean_x) * (y - mean_y) for i, y in enumerate(values))
+        denominator = sum((i - mean_x) ** 2 for i in indices)
+
+        # Avoid division by zero
+        if abs(denominator) < 1e-9:
+            return 0.0, "stable"
+
+        slope = numerator / denominator
+
+        # Determine trend direction based on slope and threshold
+        if abs(slope) < threshold:
+            trend = "stable"
+        elif slope > 0:
+            trend = "rising"
+        else:
+            trend = "falling"
+
+        return slope, trend

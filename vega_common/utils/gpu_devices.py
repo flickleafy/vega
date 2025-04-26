@@ -5,7 +5,7 @@ Concrete implementations for monitoring and controlling NVIDIA GPUs using NVML.
 import logging
 import threading
 import time  # Added for example usage
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, List, Dict, Any, Union
 
 # Import pynvml from the installed package, not the removed vendored copy
 try:
@@ -60,6 +60,26 @@ def _shutdown_nvml_safe():
             except Exception as error:
                 # Log error but don't raise, as shutdown failure is less critical
                 logging.error(f"Failed to shut down NVML: {str(error)}")
+
+
+def decode_string(byte_string: Union[bytes, str]) -> str:
+    """
+    Decode a byte string to a UTF-8 string, handling NVML-specific encoding.
+
+    Args:
+        byte_string (Union[bytes, str]): The byte string to decode.
+
+    Returns:
+        str: The decoded string.
+
+    Time complexity: O(n) where n is the length of the string.
+    """
+    if isinstance(byte_string, bytes):
+        return byte_string.decode("utf-8")
+    elif isinstance(byte_string, str):
+        return byte_string
+    else:
+        return str(byte_string)
 
 
 class NVMLError(Exception):
@@ -138,7 +158,7 @@ class NvidiaGpuMonitor(DeviceMonitor):
                 pci_info = pynvml.nvmlDeviceGetPciInfo(self.handle)
                 # Format busId to be filesystem/URL safe if needed, but keep original for display
                 if hasattr(pci_info, "busId"):
-                    device_id = pci_info.busId.decode("utf-8")  # busId is bytes
+                    device_id = decode_string(pci_info.busId)
             except Exception as pci_error:
                 logging.warning(
                     f"Failed to get PCI info for GPU {device_index}: {str(pci_error)}. Using default device ID."
@@ -149,7 +169,7 @@ class NvidiaGpuMonitor(DeviceMonitor):
             try:
                 name_bytes = pynvml.nvmlDeviceGetName(self.handle)
                 if name_bytes is not None:  # Check if name is available
-                    device_name = name_bytes.decode("utf-8")
+                    device_name = decode_string(name_bytes)
             except Exception as name_error:
                 logging.warning(
                     f"Failed to get device name for GPU {device_index}: {str(name_error)}. Using default name."
@@ -381,8 +401,8 @@ class NvidiaGpuController(DeviceController):
 
             self.handle = pynvml.nvmlDeviceGetHandleByIndex(self.device_index)
             pci_info = pynvml.nvmlDeviceGetPciInfo(self.handle)
-            device_id = pci_info.busId.decode("utf-8")
-            device_name = pynvml.nvmlDeviceGetName(self.handle).decode("utf-8")
+            device_id = decode_string(pci_info.busId)
+            device_name = decode_string(pynvml.nvmlDeviceGetName(self.handle))
 
         except pynvml.NVMLError as error:
             _shutdown_nvml_safe()

@@ -10,11 +10,11 @@ from vega_common.utils.color_utils import (
 )
 from vega_common.utils.hardware_rgb_profiles import aorus_x470_hue_fix
 
-degree_min = 30.0
-degree_max = 46.0
 
 
-def assign_degree_to_wavelength(degree: float) -> float:
+
+
+def assign_degree_to_wavelength(degree: float, degree_min = 30.0, degree_max = 46.0) -> float:
     """Convert a temperature degree to a light wavelength value.
 
     Maps temperature range (degree_min to degree_max) to wavelength range (380nm to 780nm).
@@ -57,7 +57,7 @@ def normalize_integer_color(intensity_max: int, factor: float, gamma: float, col
     return normalize_color_value(color, 0, 255)
 
 
-def wavel_to_rgb(wavelength: float, degree: float) -> str:
+def wavel_to_rgb(wavelength: float, degree: float, degree_min = 30.0, degree_max = 46.0) -> str:
     """Convert wavelength to RGB color representation.
 
     Maps light wavelength to corresponding RGB color with intensity
