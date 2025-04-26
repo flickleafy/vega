@@ -48,6 +48,12 @@ def run_cmd(
         )
 
         return result.stdout.strip() if capture_output else ""
+    except subprocess.CalledProcessError as e:
+        # Check if this is a permission error
+        if e.stderr and ("permission denied" in e.stderr.lower() or "operation not permitted" in e.stderr.lower()):
+            raise PermissionError(f"Insufficient permissions to run command: {cmd_str if shell else cmd}") from e
+        # Re-raise the original error for other cases
+        raise
     except (subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
         print(f"Error running command {cmd}: {e}")
         raise

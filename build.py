@@ -43,13 +43,14 @@ def run_command(cmd: List[str]) -> Tuple[bool, str]:
         return False, str(e)
 
 
-def build_executable(name: str, script_path: str) -> bool:
+def build_executable(name: str, script_path: str, project_root: Path) -> bool:
     """
     Build an executable using PyInstaller.
 
     Args:
         name: Name for the output executable
         script_path: Path to the Python script to compile
+        project_root: Path to the project root directory
 
     Returns:
         Boolean indicating success or failure
@@ -57,7 +58,65 @@ def build_executable(name: str, script_path: str) -> bool:
     Time complexity: O(P) where P is the PyInstaller process execution time
     """
     print(f"Building {name}...")
-    success, output = run_command(["pyinstaller", "-F", "-n", name, script_path])
+    
+    # Build PyInstaller command with necessary options
+    cmd = [
+        "pyinstaller",
+        "-F",  # Single file
+        "-n", name,  # Output name
+        # Exclude tkinter and related modules - matplotlib is only used for color
+        # conversion, not visualization, so tkinter (TkAgg backend) is not needed.
+        # This prevents the "Tcl data directory not found" error at runtime.
+        "--exclude-module=tkinter",
+        "--exclude-module=_tkinter",
+        "--exclude-module=Tkinter",
+        "--exclude-module=tcl",
+        "--exclude-module=tk",
+        # Exclude matplotlib visualization components - only colour-science color
+        # conversion is used. This prevents matplotlib runtime hook errors.
+        "--exclude-module=matplotlib",
+        "--exclude-module=matplotlib.pyplot",
+        "--exclude-module=matplotlib.backends",
+        "--hidden-import=vega_common",  # Include vega_common module
+        "--hidden-import=vega_common.utils",  # Include utils submodule
+        "--hidden-import=vega_common.utils.device_manager",
+        "--hidden-import=vega_common.utils.device_monitor",
+        "--hidden-import=vega_common.utils.device_controller",
+        "--hidden-import=vega_common.utils.device_status",
+        "--hidden-import=vega_common.utils.cpu_devices",
+        "--hidden-import=vega_common.utils.gpu_devices",
+        "--hidden-import=vega_common.utils.watercooler_devices",
+        "--hidden-import=vega_common.utils.color_utils",
+        "--hidden-import=vega_common.utils.color_gradient_utils",
+        "--hidden-import=vega_common.utils.temperature_utils",
+        "--hidden-import=vega_common.utils.sliding_window",
+        "--hidden-import=vega_common.utils.sub_process",
+        "--hidden-import=vega_common.utils.process_utils",
+        "--hidden-import=vega_common.utils.datetime_utils",
+        "--hidden-import=vega_common.utils.files_manipulation",
+        "--hidden-import=vega_common.utils.hardware_rgb_profiles",
+        # Hidden imports for pkg_resources/setuptools runtime hooks
+        # Using --collect-all for jaraco to include all data files (e.g., Lorem ipsum.txt)
+        "--collect-all=jaraco.text",
+        "--collect-all=jaraco.functools",
+        "--collect-all=jaraco.context",
+        "--hidden-import=pkg_resources.extern",
+        # Collect numpy submodules needed for colour-science
+        "--collect-submodules=numpy",
+        "--hidden-import=numpy.core._multiarray_tests",
+        # Collect colour-science library
+        "--collect-all=colour",
+        # Fix libusb/pyusb backend issue for liquidctl:
+        # PyInstaller bundles an incompatible libusb. We need to include the
+        # system's libusb-1.0 and libhidapi-libusb libraries for USB device access.
+        "--collect-all=usb",  # Collect all pyusb submodules
+        "--add-binary=/lib/x86_64-linux-gnu/libusb-1.0.so.0:.",  # System libusb-1.0
+        "--add-binary=/lib/x86_64-linux-gnu/libhidapi-libusb.so.0:.",  # libhidapi for HID devices
+        f"--paths={project_root}",  # Add project root to search path
+        script_path,
+    ]
+    
+    success, output = run_command(cmd)
 
     if not success:
         print(f"Error building {name}:")
@@ -154,7 +213,7 @@ def main() -> int:
     build_failures = 0
 
     for name, script_path in executables.items():
-        if not build_executable(name, str(script_dir / script_path)):
+        if not build_executable(name, str(script_dir / script_path), script_dir):
             build_failures += 1
 
     if build_failures > 0:

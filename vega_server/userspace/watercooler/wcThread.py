@@ -4,11 +4,12 @@ import logging
 from typing import Dict, Optional, List, Tuple
 
 # Common utilities
-from vega_common.utils.temperature_utils import estimate_cpu_from_liquid_temp
+from vega_common.utils.temperature_utils import estimate_cpu_from_liquid_temp, cpu_temp_to_fan_speed
 from vega_common.utils.sliding_window import NumericSlidingWindow
 from vega_common.utils.device_manager import DeviceManager
 from vega_common.utils.cpu_devices import CpuMonitor  # Use the common CPU monitor
 from vega_common.utils.watercooler_devices import WatercoolerMonitor, WatercoolerController  # New imports
+from vega_common.utils.color_gradient_utils import get_temperature_color
 
 VALUE_COLUMN = 1
 LIQUID_TEMPERATURE_ROW = 0
@@ -126,7 +127,7 @@ def watercooler_thread(_):
     
 
     try:
-        if device_manager.get_monitors():
+        if device_manager.monitors:
             device_manager.start_all_monitors()
             logging.info("Device monitoring started.")
         else:
@@ -146,16 +147,14 @@ def watercooler_thread(_):
             if cpu_monitor:
                 # Get comprehensive CPU status information from DeviceManager
                 # O(1) complexity for dictionary lookups
-                cpu_status = device_manager.get_device_status(
-                    device_type="cpu", device_id=cpu_monitor_id
-                )
+                cpu_status = device_manager.get_device_status(cpu_monitor_id)
                 
                 if cpu_status:
                     # Get current temperature reading
                     # O(1) property access
                     cpu_temp = cpu_status.get_property("temperature")
                     
-                    if cpu_temp is None or cpu_status.is_error("temperature"):
+                    if cpu_temp is None or cpu_status.has_error("temperature"):
                         logging.warning(
                             f"CPU Monitor ({cpu_monitor_id}): No valid temperature reading. Will attempt estimation."
                         )
@@ -188,9 +187,13 @@ def watercooler_thread(_):
                     logging.info(
                         f"CPU Temp: {cpu_temp:.1f}°C, Avg: {cpu_average_temp:.1f}°C{trend_str} (No WC Devices)"
                     )
+                    # Calculate LED color based on CPU temperature
+                    array_color = get_temperature_color(cpu_average_temp, min_temp=30, max_temp=90)
+                    
                     # Update global data structure with CPU temperature info
                     globals.WC_DATA_OUT[0]["cpu_degree"] = round(cpu_temp, 1)
                     globals.WC_DATA_OUT[0]["cpu_average_degree"] = round(cpu_average_temp, 1)
+                    globals.WC_DATA_OUT[0]["array_color"] = array_color
                     if cpu_temp_trend:
                         globals.WC_DATA_OUT[0]["cpu_temp_trend"] = cpu_temp_trend
                 else:
@@ -202,17 +205,15 @@ def watercooler_thread(_):
             for index, wc_monitor in enumerate(wc_monitors):
                 wc_controller = wc_controllers[index]
 
-                wc_status = wc_monitor.get_status()
-                if not wc_status:
+                wc_temp = wc_monitor.get_liquid_temperature()
+                wc_fan_speed = wc_monitor.get_fan_speed()
+                wc_pump_speed = wc_monitor.get_pump_speed()
+                
+                if wc_temp is None:
                     logging.warning(
                         f"Could not get status for WC device {index} ({wc_monitor.device_name})"
                     )
                     continue
-
-                # --- Extract Watercooler Metrics ---
-                wc_temp = wc_status[LIQUID_TEMPERATURE_ROW][VALUE_COLUMN]
-                wc_fan_speed = wc_status[FAN_SPEED_ROW][VALUE_COLUMN]
-                wc_pump_speed = wc_status[PUMP_SPEED_ROW][VALUE_COLUMN]
 
                 # --- CPU Temperature Estimation Fallback ---
                 if cpu_temp is None:
@@ -245,10 +246,13 @@ def watercooler_thread(_):
                 weighed_average_temp = (wc_average_temp + (cpu_average_temp * 0.85)) / 2
 
                 try:
-                    # Set LED color based on temperature - O(1) operation
-                    array_color = wc_controller.set_led_color(wc_average_temp)
-                    # Set fan speed based on temperature - O(1) operation
-                    fan_status = wc_controller.set_fan_speed(weighed_average_temp)
+                    # Calculate LED color based on temperature - O(N) where N is color ranges
+                    array_color = get_temperature_color(weighed_average_temp, min_temp=20, max_temp=50)
+                    # Set LED color on the watercooler - O(1) operation
+                    wc_controller.set_lighting_color(array_color)
+                    # Calculate and set fan speed based on weighted temperature - O(1) operation
+                    fan_status = cpu_temp_to_fan_speed(weighed_average_temp)
+                    wc_controller.set_fan_speed(fan_status)
                 except Exception as e:
                     logging.error(
                         f"Error during WC control (LED/Fan) for device {index}: {e}", exc_info=True

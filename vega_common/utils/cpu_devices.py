@@ -106,10 +106,16 @@ class CpuController(DeviceController):
             cmd_to_run = command if not use_shell else " ".join(command)
             result = sub_process.run_cmd(cmd_to_run, shell=use_shell)
             return result.strip() if result else None
+        except PermissionError as e:
+            # Clean permission error logging
+            logging.warning(
+                f"CPU Controller ({self.device_id}): Insufficient permissions to execute command. "
+                "Root/sudo privileges required for CPU governor control."
+            )
+            return None
         except Exception as e:
             logging.error(
-                f"CPU Controller ({self.device_id}): Error running command '{cmd_to_run}': {e}",
-                exc_info=True,
+                f"CPU Controller ({self.device_id}): Error running command '{cmd_to_run}': {e}"
             )
             return None
 
@@ -137,9 +143,7 @@ class CpuController(DeviceController):
         ):  # Modified to use hasattr for safer check
             # If result is None and it wasn't due to a test side effect raising an exception,
             # it means _run_cpu_command caught an exception.
-            logging.error(
-                f"CPU Controller ({self.device_id}): Failed to execute command to set power plan to '{plan}'."
-            )
+            # Don't log again here since _run_cpu_command already logged the issue
             return False
 
         # Skip verification if command failed in tests

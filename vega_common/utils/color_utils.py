@@ -7,6 +7,13 @@ This module provides common color manipulation operations used across Vega sub-p
 import math
 from typing import List, Tuple, Union
 
+try:
+    from openrgb.utils import RGBColor as OpenRGBColor
+    OPENRGB_AVAILABLE = True
+except ImportError:
+    OPENRGB_AVAILABLE = False
+    OpenRGBColor = None
+
 RGBColor = Tuple[int, int, int]
 
 
@@ -444,18 +451,22 @@ def calculate_color_distance(color1: List[int], color2: List[int]) -> float:
     return base_distance * (1 + luminance_factor)
 
 
-def rgb_to_rgbcolor(rgb: List[int]) -> RGBColor:
+def rgb_to_rgbcolor(rgb: List[int]):
     """
-    Convert a list of RGB values to an RGBColor tuple, normalizing values if needed.
+    Convert a list of RGB values to an OpenRGB RGBColor object, normalizing values if needed.
 
     Args:
         rgb (List[int]): RGB values as a list [r, g, b]
 
     Returns:
-        RGBColor: Tuple of (r, g, b) values
+        OpenRGBColor: OpenRGB RGBColor object if openrgb is available, otherwise tuple (r, g, b)
     """
     normalized = normalize_rgb_values(rgb)
-    return (normalized[0], normalized[1], normalized[2])
+    
+    if OPENRGB_AVAILABLE:
+        return OpenRGBColor(normalized[0], normalized[1], normalized[2])
+    else:
+        return (normalized[0], normalized[1], normalized[2])
 
 
 def handle_extreme_hsv(array_hsv: List[int]) -> List[int]:

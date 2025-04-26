@@ -52,11 +52,12 @@ class DeviceMonitor(ABC):
         self.device_id = device_id
         self.device_type = device_type
         self.device_name = device_name
-        self.status = DeviceStatus(device_id, device_type)
+        self.status = DeviceStatus(device_id, device_type, device_name)
         self.monitoring_interval = monitoring_interval
         self.is_monitoring = False
         self.monitor_thread = None
         self._stop_event = threading.Event()
+        self.tracked_properties = tracked_properties or []
 
         # Register tracked properties if provided
         if tracked_properties:
