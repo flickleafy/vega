@@ -13,8 +13,8 @@ from abc import ABCMeta
 
 # Import liquidctl conditionally to handle cases where it's not installed
 try:
-    import liquidctl.cli as liquidctl_cli
-    from liquidctl.driver import BaseDriver
+    import liquidctl
+    from liquidctl.driver.base import BaseDriver
     liquidctl_available = True
 except ImportError:
     liquidctl_available = False
@@ -27,6 +27,7 @@ from .device_monitor import DeviceMonitor
 from .device_controller import DeviceController
 from .device_status import DeviceStatus
 from .temperature_utils import cpu_temp_to_fan_speed
+from .color_gradient_utils import get_temperature_color as gradient_temp_to_color
 
 # Global lock for device operations to prevent concurrent access issues
 _liquidctl_lock = threading.Lock()
@@ -37,23 +38,13 @@ _FAN_SPEED_ROW = 1
 _PUMP_SPEED_ROW = 2
 _VALUE_COLUMN = 1
 
-# Default RGB colors for different temperature ranges
-_DEFAULT_COLOR_RANGES = [
-    (0, 30, [0, 0, 255]),      # Blue for cold (0-30°C)
-    (30, 40, [0, 255, 255]),   # Cyan for cool (30-40°C)
-    (40, 45, [0, 255, 0]),     # Green for normal (40-45°C)
-    (45, 50, [255, 255, 0]),   # Yellow for warm (45-50°C)
-    (50, 55, [255, 128, 0]),   # Orange for hot (50-55°C)
-    (55, 100, [255, 0, 0]),    # Red for very hot (55+°C)
-]
-
 
 def find_liquidctl_devices() -> List[BaseDriver]:
     """
-    Find all compatible liquidctl devices.
+    Find all compatible liquidctl devices, excluding LED-only controllers.
     
     Returns:
-        List[BaseDriver]: List of available liquidctl devices or empty list if none found.
+        List[BaseDriver]: List of available liquidctl watercooler devices or empty list if none found.
         
     Time complexity: O(N) where N is the number of connected USB devices.
     """
@@ -61,11 +52,36 @@ def find_liquidctl_devices() -> List[BaseDriver]:
         logging.error("Cannot find liquidctl devices: liquidctl library not available.")
         return []
     
+    # Keywords that indicate a device is NOT a watercooler (LED controllers, etc.)
+    excluded_keywords = [
+        "aura led",
+        "led controller",
+        "rgb controller",
+        "addressable led",
+        "smart device v2",  # NZXT Smart Device is an LED/Fan hub, not a cooler
+    ]
+    
     try:
         with _liquidctl_lock:
-            devices = list(liquidctl_cli.find_liquidctl_devices())
-            logging.debug(f"Found {len(devices)} liquidctl-compatible device(s)")
-            return devices
+            all_devices = list(liquidctl.find_liquidctl_devices())
+            logging.debug(f"Found {len(all_devices)} liquidctl-compatible device(s)")
+            
+            # Filter out LED-only controllers
+            watercooler_devices = []
+            for device in all_devices:
+                device_name = device.description.lower() if hasattr(device, "description") else ""
+                
+                # Check if device name contains any excluded keywords
+                is_excluded = any(keyword in device_name for keyword in excluded_keywords)
+                
+                if is_excluded:
+                    logging.info(f"Skipping non-watercooler device: {device.description}")
+                else:
+                    watercooler_devices.append(device)
+                    logging.debug(f"Found watercooler device: {device.description}")
+            
+            logging.debug(f"Found {len(watercooler_devices)} watercooler device(s) after filtering")
+            return watercooler_devices
     except Exception as e:
         logging.error(f"Error while searching for liquidctl devices: {e}", exc_info=True)
         return []
@@ -188,25 +204,46 @@ def set_led_color(device: BaseDriver, r: int, g: int, b: int, mode: str = "fixed
     Time complexity: O(1) for the device operations.
     """
     if not liquidctl_available:
+        logging.debug("liquidctl not available, cannot set LED color")
         return False
+    
+    # liquidctl expects colors as a list of RGB triples: [[r, g, b]]
+    color_list = [[r, g, b]]
     
     # Not all devices support the same lighting channels
     # Try common channel names used across different liquidctl devices
-    channels = ["sync", "led", "logo", "ring", "external"]
+    channels = ["sync", "led", "logo", "ring", "external", "led1", "pump"]
+    
+    # Different modes to try (some devices use different mode names)
+    modes_to_try = [mode, "static", "super-fixed"] if mode == "fixed" else [mode]
+    
     success = False
+    attempts = []
     
     try:
         with _liquidctl_lock:
             for channel in channels:
-                try:
-                    if mode == "fixed":
-                        device.set_color(channel, mode, [r, g, b])
-                    else:
-                        device.set_color(channel, mode, [r, g, b], speed=speed)
-                    success = True
-                except Exception:
-                    # Just try the next channel if this one failed
-                    pass
+                for mode_attempt in modes_to_try:
+                    try:
+                        logging.debug(f"Attempting set_color: device={device.description}, channel={channel}, mode={mode_attempt}, color={color_list}")
+                        result = device.set_color(channel, mode_attempt, color_list, speed=speed)
+                        logging.info(f"Successfully set LED color on {device.description} (channel={channel}, mode={mode_attempt}, RGB=[{r},{g},{b}])")
+                        success = True
+                        break  # Exit mode loop on success
+                    except KeyError as e:
+                        # Mode not supported for this device
+                        attempts.append(f"{channel}/{mode_attempt}: mode not supported")
+                        logging.debug(f"Mode '{mode_attempt}' not supported for channel '{channel}' on {device.description}")
+                    except Exception as e:
+                        # Other error (wrong channel, etc.)
+                        attempts.append(f"{channel}/{mode_attempt}: {type(e).__name__}: {str(e)}")
+                        logging.debug(f"Failed to set color for channel '{channel}' mode '{mode_attempt}': {e}")
+                
+                if success:
+                    break  # Exit channel loop on success
+            
+            if not success:
+                logging.warning(f"Failed to set LED color for {device.description} after trying all channels/modes. Attempts: {attempts}")
             
             return success
     except Exception as e:
@@ -215,33 +252,25 @@ def set_led_color(device: BaseDriver, r: int, g: int, b: int, mode: str = "fixed
 
 
 def get_temperature_color(temperature: float, 
-                          color_ranges: List[Tuple[float, float, List[int]]] = None) -> List[int]:
+                          min_temp: float = 30.0,
+                          max_temp: float = 90.0) -> List[int]:
     """
-    Get an RGB color based on the temperature.
+    Get an RGB color based on the temperature using perceptually smooth gradient.
+    
+    This function uses the more elaborate color calculation from color_gradient_utils
+    that provides smooth HSV-based color transitions from blue (cool) to red (hot).
     
     Args:
         temperature (float): Temperature in degrees Celsius.
-        color_ranges (List[Tuple[float, float, List[int]]], optional): Custom color range mapping.
-            Each tuple contains (min_temp, max_temp, [r, g, b]). Defaults to None.
+        min_temp (float, optional): Minimum temperature (blue). Defaults to 30.0.
+        max_temp (float, optional): Maximum temperature (red). Defaults to 90.0.
         
     Returns:
         List[int]: RGB color values [r, g, b].
         
-    Time complexity: O(N) where N is the number of color ranges.
+    Time complexity: O(1) for HSV-based color calculation.
     """
-    if color_ranges is None:
-        color_ranges = _DEFAULT_COLOR_RANGES
-        
-    # Default to first color if temperature is too low, or last color if too high
-    result_color = color_ranges[0][2] if temperature < color_ranges[0][0] else color_ranges[-1][2]
-    
-    # Find the matching range
-    for min_temp, max_temp, color in color_ranges:
-        if min_temp <= temperature < max_temp:
-            result_color = color
-            break
-            
-    return result_color
+    return gradient_temp_to_color(temperature, min_temp=int(min_temp), max_temp=int(max_temp))
 
 
 class WatercoolerMonitor(DeviceMonitor):
@@ -579,14 +608,18 @@ class WatercoolerController(DeviceController):
         
         return success
     
-    def set_lighting_color(self, r: int, g: int, b: int, mode: str = "fixed") -> bool:
+    def set_lighting_color(self, r: Union[int, List[int]], g: Optional[int] = None, b: Optional[int] = None, mode: str = "fixed") -> bool:
         """
         Set the LED lighting color for the watercooling device.
         
+        Supports two calling conventions:
+        - set_lighting_color([r, g, b]) - array format
+        - set_lighting_color(r, g, b) - individual components
+        
         Args:
-            r (int): Red component (0-255).
-            g (int): Green component (0-255).
-            b (int): Blue component (0-255).
+            r (Union[int, List[int]]): Red component (0-255) or RGB array [r, g, b].
+            g (Optional[int]): Green component (0-255). Not used if r is a list.
+            b (Optional[int]): Blue component (0-255). Not used if r is a list.
             mode (str, optional): Lighting mode. Defaults to "fixed".
             
         Returns:
@@ -594,15 +627,29 @@ class WatercoolerController(DeviceController):
             
         Time complexity: O(1) for device operation.
         """
-        # Ensure color components are within valid range
-        r = max(0, min(255, int(r)))
-        g = max(0, min(255, int(g)))
-        b = max(0, min(255, int(b)))
+        # Handle array format: set_lighting_color([r, g, b])
+        if isinstance(r, (list, tuple)):
+            if len(r) >= 3:
+                r_val, g_val, b_val = int(r[0]), int(r[1]), int(r[2])
+            else:
+                logging.error(f"Invalid color array format for {self.device_id}: {r}")
+                return False
+        # Handle individual components: set_lighting_color(r, g, b)
+        elif g is not None and b is not None:
+            r_val, g_val, b_val = int(r), int(g), int(b)
+        else:
+            logging.error(f"Invalid arguments to set_lighting_color for {self.device_id}")
+            return False
         
-        success = set_led_color(self.device, r, g, b, mode)
+        # Ensure color components are within valid range
+        r_val = max(0, min(255, r_val))
+        g_val = max(0, min(255, g_val))
+        b_val = max(0, min(255, b_val))
+        
+        success = set_led_color(self.device, r_val, g_val, b_val, mode)
         if success:
-            self.current_color = [r, g, b]
-            logging.debug(f"Set lighting color to [{r},{g},{b}] for {self.device_id}")
+            self.current_color = [r_val, g_val, b_val]
+            logging.debug(f"Set lighting color to [{r_val},{g_val},{b_val}] for {self.device_id}")
         else:
             logging.warning(f"Failed to set lighting color for {self.device_id}")
             

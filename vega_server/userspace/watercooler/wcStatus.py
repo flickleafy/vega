@@ -1,5 +1,4 @@
-from liquidctl.driver import *  # NOSONAR
-import liquidctl.cli as liquidAPI
+from liquidctl.driver import find_liquidctl_devices
 
 import time
 
@@ -29,7 +28,7 @@ def wc_initialize():
     Returns:
         _type_: _description_
     """
-    devices = list(liquidAPI.find_liquidctl_devices())
+    devices = list(find_liquidctl_devices())
     if len(devices) > 0:
         for index, device in enumerate(devices):
             result = None

@@ -5,6 +5,7 @@ import time
 import lighting.lightingStatus as lightingStatus
 from openrgb.utils import RGBColor
 from openrgb.utils import DeviceType
+from openrgb.utils import OpenRGBDisconnected
 
 from vega_common.utils.hardware_rgb_profiles import aorus_x470_hue_fix
 from vega_common.utils.color_utils import calculate_color_signature
@@ -38,10 +39,10 @@ def lighting_thread(_):
                     set_device_color(device, array_color)
 
             time.sleep(3)
-        except (ConnectionResetError, BrokenPipeError, TimeoutError) as e:
+        except (ConnectionResetError, BrokenPipeError, TimeoutError, OpenRGBDisconnected) as e:
             print(str(e) + " during main loop")
             print("Trying to reconnect...")
-            lightingStatus.init_lighting()
+            devices = lightingStatus.init_lighting()
     return None
 
 
@@ -54,7 +55,7 @@ def set_device_color(device, array_color):
     """
     # Check if the color has actually changed since the last update
     # If not, return early to avoid unnecessary device updates
-    if not color_not_changed(array_color):
+    if not color_not_changed(device, array_color):
         return
 
     print("###")
@@ -80,12 +81,13 @@ def set_device_color(device, array_color):
         device.update()
 
 
-def color_not_changed(array_color):
-    """Check if the color has changed from the last update.
+def color_not_changed(device, array_color):
+    """Check if the color has changed from the last update for a specific device.
 
     Uses a color signature approach to detect changes in RGB values.
 
     Args:
+        device: The OpenRGB device object
         array_color (list): RGB color as [r, g, b]
 
     Returns:
@@ -93,9 +95,13 @@ def color_not_changed(array_color):
     """
     # Calculate the color signature using common utility
     color_signature_current = calculate_color_signature(array_color)
-
-    if globals.COLOR_SIG_LAST and globals.COLOR_SIG_LAST == color_signature_current:
+    
+    # Use device id() (memory address) as unique key to track color signature per device instance
+    # This ensures each physical device gets its own tracking, even if names are identical
+    device_key = id(device)
+    
+    if device_key in globals.COLOR_SIG_LAST and globals.COLOR_SIG_LAST[device_key] == color_signature_current:
         return False
 
-    globals.COLOR_SIG_LAST = color_signature_current
+    globals.COLOR_SIG_LAST[device_key] = color_signature_current
     return True

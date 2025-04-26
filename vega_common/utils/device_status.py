@@ -15,24 +15,27 @@ class DeviceStatus:
     Attributes:
         device_id (str): Unique identifier for the device.
         device_type (str): Type of the device (e.g., 'gpu', 'cpu', 'watercooler').
+        device_name (str): Human-readable name of the device.
         status_properties (Dict[str, Any]): Dictionary of device status properties.
         last_update (datetime): Timestamp of the last status update.
         status_history (Dict[str, SlidingWindow]): History of numeric status values.
         errors (Dict[str, str]): Dictionary of error messages by property name.
     """
 
-    def __init__(self, device_id: str, device_type: str, history_size: int = 10):
+    def __init__(self, device_id: str, device_type: str, device_name: str = None, history_size: int = 10):
         """
         Initialize a DeviceStatus object.
 
         Args:
             device_id (str): Unique identifier for the device.
             device_type (str): Type of the device.
+            device_name (str, optional): Human-readable name of the device.
             history_size (int, optional): Size of the sliding window for history tracking.
                 Defaults to 10.
         """
         self.device_id = device_id
         self.device_type = device_type
+        self.device_name = device_name or device_id
         self.status_properties = {}
         self.last_update = datetime.now()
         self.status_history = {}
@@ -40,16 +43,23 @@ class DeviceStatus:
         # Store error messages by property name
         self.errors: Dict[str, str] = {}
 
-    def update_property(self, property_name: str, value: Any) -> None:
+    def update_property(self, property_name: str, value: Any, is_error: bool = False) -> None:
         """
         Update a status property with a new value.
 
         Args:
             property_name (str): Name of the property to update.
             value (Any): New value for the property.
+            is_error (bool): Whether this update represents an error state.
         """
         self.status_properties[property_name] = value
         self.last_update = datetime.now()
+
+        # Handle error state
+        if is_error:
+            self.set_error(property_name, f"Failed to read {property_name}")
+        else:
+            self.clear_error(property_name)
 
         # If the value is numeric, add it to the history
         if isinstance(value, (int, float)) and property_name in self.status_history:
@@ -153,6 +163,7 @@ class DeviceStatus:
         result = {
             "device_id": self.device_id,
             "device_type": self.device_type,
+            "device_name": self.device_name,
             "last_update": self.last_update.isoformat(),
             **self.status_properties,
         }
@@ -218,3 +229,15 @@ class DeviceStatus:
         Complexity: O(1) - Dictionary clear operation.
         """
         self.errors.clear()
+
+    def mark_updated(self) -> None:
+        """
+        Mark the status as updated with the current timestamp.
+
+        This is useful for tracking when the last update occurred,
+        especially when update_property is not called but the status
+        should still be marked as refreshed.
+
+        Complexity: O(1)
+        """
+        self.last_update = datetime.now()

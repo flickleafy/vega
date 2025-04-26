@@ -16,14 +16,6 @@ def init_lighting():
         except ConnectionRefusedError:
             time.sleep(3)
             continue
-    # try:
-    # cooler = cli.get_devices_by_type(DeviceType.COOLER)[0]
-    # except IndexError:
-    # cooler = False
-    # try:
-    # gpu = cli.get_devices_by_type(DeviceType.GPU)[0]
-    # except IndexError:
-    # gpu = False
     print("###")
     print("### Getting OpenRGB devices")
     print("###")
@@ -32,35 +24,31 @@ def init_lighting():
     time.sleep(0.15)
     rams = open_rgb.get_devices_by_type(DeviceType.DRAM)
     motherboard = open_rgb.get_devices_by_type(DeviceType.MOTHERBOARD)
-    devices = rams + motherboard
+    gpus = open_rgb.get_devices_by_type(DeviceType.GPU)
+    devices = rams + motherboard + gpus
 
     for device in devices:
-        print("### Reseting device " + device.name)
-        print("###")
-        time.sleep(0.15)
-        device.clear()
-        time.sleep(0.15)
-        if "corsair dominator platinum" in device.name.lower():
-            device.set_mode("direct")
-        else:
-            device.set_mode("off")
+        try:
+            print("### Reseting device " + device.name)
+            print("###")
             time.sleep(0.15)
-            device.set_mode("static")
+            device.clear()
+            time.sleep(0.15)
+            if "corsair dominator platinum" in device.name.lower():
+                device.set_mode("direct")
+            elif device.type == DeviceType.GPU:
+                # GPUs need special handling: switch to a different mode first,
+                # then back to static to ensure color changes work properly
+                device.set_mode("direct")
+                time.sleep(0.15)
+                device.set_mode("static")
+            else:
+                device.set_mode("off")
+                time.sleep(0.15)
+                device.set_mode("static")
+        except Exception as e:
+            print(f"### Error initializing device {device.name}: {e}")
+            print("### Continuing with next device...")
+            continue
 
-    # To make sure the devices are in the right mode, and to work around a problem
-    #   where the gpu won't change colors until switched out of static mode and
-    #   then back into static mode.
-
-    # NOSONAR
-    # if gpu:
-    #     gpu.set_mode(1)  # Anything would work, this is breathing in my setup
-    #     sleep(.1)
-    #     gpu.set_mode(0)  # Static mode.  My GPU doesn't have a direct mode.
-    #     try:
-    #         nvmlInit()
-    #         handle = nvmlDeviceGetHandleByIndex(0)
-    #     except Exception as err:
-    #         gpu, handle = False, False
-    # else:
-    #     handle = False
     return devices  # cooler, gpu, handle
