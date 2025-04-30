@@ -1,15 +1,15 @@
 import globals
 import time
-import logging
 from typing import Optional
 
 # Use common utilities
 from vega_common.utils.device_manager import DeviceManager
 from vega_common.utils.cpu_devices import CpuMonitor, CpuController
 from vega_common.utils.sliding_window import NumericSlidingWindow
+from vega_common.utils.logging_utils import get_module_logger
 
-# Setup basic logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# Setup module-specific logging
+logger = get_module_logger("vega_server/rootspace/cpuclocking")
 
 # Constants
 TEMPERATURE_WINDOW_SIZE = 10  # Size of sliding window for temperature averaging
@@ -30,7 +30,7 @@ def cpuclocking_thread(_):
     Returns:
         None: This function runs indefinitely until an error or interruption.
     """
-    logging.info("Initializing CPU clocking thread...")
+    logger.info("Initializing CPU clocking thread...")
     time.sleep(30)
 
     device_manager = DeviceManager()
@@ -46,11 +46,11 @@ def cpuclocking_thread(_):
         device_manager.register_monitor(cpu_monitor)
         device_manager.register_controller(cpu_controller)
 
-        logging.info("Registered CPU monitor and controller")
+        logger.info("Registered CPU monitor and controller")
 
         # Start monitoring
         device_manager.start_all_monitors()
-        logging.info("CPU monitoring started")
+        logger.info("CPU monitoring started")
 
         # Initial delay to allow first readings to come in
         time.sleep(5)
@@ -74,7 +74,7 @@ def cpuclocking_thread(_):
                     trend = cpu_status.get_property_trend("temperature")
 
                     # Log temperature info
-                    logging.info(
+                    logger.info(
                         f"CPU Temperature: Current={current_temp:.1f}°C, "
                         f"Average={avg_temp:.1f}°C, Trend={trend or 'unknown'}"
                     )
@@ -92,24 +92,24 @@ def cpuclocking_thread(_):
                     # Update globals with power plan info
                     globals.WC_DATA_OUT[0]["cpu_powerplan"] = power_plan if success else "unknown"
                 else:
-                    logging.warning("CPU temperature reading not available")
+                    logger.warning("CPU temperature reading not available")
                     # Use default sleep interval when temperature is unavailable
                     sleep_interval = DEFAULT_SLEEP_INTERVAL
             else:
-                logging.warning("Failed to get CPU status from device manager")
+                logger.warning("Failed to get CPU status from device manager")
                 sleep_interval = DEFAULT_SLEEP_INTERVAL
 
             # Wait before next cycle (dynamic sleep based on recommendation)
             time.sleep(sleep_interval)
 
     except KeyboardInterrupt:
-        logging.info("CPU clocking thread received KeyboardInterrupt. Shutting down.")
+        logger.info("CPU clocking thread received KeyboardInterrupt. Shutting down.")
     except Exception as e:
-        logging.error(f"Unhandled exception in CPU clocking thread: {e}", exc_info=True)
+        logger.error(f"Unhandled exception in CPU clocking thread: {e}", exc_info=True)
     finally:
-        logging.info("Stopping CPU monitors...")
+        logger.info("Stopping CPU monitors...")
         device_manager.stop_all_monitors()
-        logging.info("CPU monitors stopped.")
+        logger.info("CPU monitors stopped.")
 
-    logging.info("CPU clocking thread finished.")
+    logger.info("CPU clocking thread finished.")
     return None  # Explicitly return None

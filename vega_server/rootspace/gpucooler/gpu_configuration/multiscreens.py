@@ -2,6 +2,11 @@ import gpucooler.nvidiaex.parseXconfig as parse_xconfig
 from globals import ERROR_MESSAGE
 from vega_common.utils.files_manipulation import read_file, write_file
 
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_server/rootspace/gpucooler/gpu_configuration")
+
 
 def layout_has_multi_screens():
     has_multi_screens = False
@@ -15,7 +20,7 @@ def layout_has_multi_screens():
         if has_multi_screens:
             check_and_fix_layout_order(xorg_conf_file, serverlayout_section)
     except Exception as err:
-        print(ERROR_MESSAGE, err)
+        logger.error(f"{ERROR_MESSAGE} {err}")
 
     return has_multi_screens
 

@@ -1244,20 +1244,42 @@ class TestHelperFunctions:
     def test_rgb_to_rgbcolor(self):
         """Test RGB array to RGBColor tuple conversion."""
         # Test standard RGB values
-        assert rgb_to_rgbcolor([100, 150, 200]) == (100, 150, 200)
+        result = rgb_to_rgbcolor([100, 150, 200])
+        # Handle both tuple and OpenRGBColor return types
+        if isinstance(result, tuple):
+            assert result == (100, 150, 200)
+        else:
+            assert (result.red, result.green, result.blue) == (100, 150, 200)
 
         # Test out-of-range values
         # Values above 255 should be normalized to 255
-        assert rgb_to_rgbcolor([300, 150, 200]) == (255, 150, 200)
+        result = rgb_to_rgbcolor([300, 150, 200])
+        if isinstance(result, tuple):
+            assert result == (255, 150, 200)
+        else:
+            assert (result.red, result.green, result.blue) == (255, 150, 200)
 
         # Negative values should be normalized to 0
-        assert rgb_to_rgbcolor([-50, 150, 200]) == (0, 150, 200)
+        result = rgb_to_rgbcolor([-50, 150, 200])
+        if isinstance(result, tuple):
+            assert result == (0, 150, 200)
+        else:
+            assert (result.red, result.green, result.blue) == (0, 150, 200)
 
         # Test maximum values
-        assert rgb_to_rgbcolor([255, 255, 255]) == (255, 255, 255)
+        result = rgb_to_rgbcolor([255, 255, 255])
+        if isinstance(result, tuple):
+            assert result == (255, 255, 255)
+        else:
+            assert (result.red, result.green, result.blue) == (255, 255, 255)
 
         # Test minimum values
-        assert rgb_to_rgbcolor([0, 0, 0]) == (0, 0, 0)
+        result = rgb_to_rgbcolor([0, 0, 0])
+        if isinstance(result, tuple):
+            assert result == (0, 0, 0)
+        else:
+            assert (result.red, result.green, result.blue) == (0, 0, 0)
+
 
     def test_handle_extreme_hsv(self):
         """Test handling extreme HSV values."""

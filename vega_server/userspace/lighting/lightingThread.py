@@ -10,6 +10,10 @@ from openrgb.utils import OpenRGBDisconnected
 from vega_common.utils.hardware_rgb_profiles import aorus_x470_hue_fix
 from vega_common.utils.color_utils import calculate_color_signature
 from vega_common.utils.color_utils import rgb_to_rgbcolor
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_server/userspace/lighting")
 
 
 def lighting_thread(_):
@@ -33,15 +37,14 @@ def lighting_thread(_):
                 try:
                     array_color = globals.WC_DATA_OUT[0]["array_color"]
                 except Exception as err:
-                    print("### Error reading global structure", err)
+                    logger.error(f"Error reading global structure: {err}")
                     continue
                 if isinstance(array_color, list):
                     set_device_color(device, array_color)
 
             time.sleep(3)
         except (ConnectionResetError, BrokenPipeError, TimeoutError, OpenRGBDisconnected) as e:
-            print(str(e) + " during main loop")
-            print("Trying to reconnect...")
+            logger.warning(f"{e} during main loop. Trying to reconnect...")
             devices = lightingStatus.init_lighting()
     return None
 
@@ -58,9 +61,7 @@ def set_device_color(device, array_color):
     if not color_not_changed(device, array_color):
         return
 
-    print("###")
-    print("### Setting device: " + device.name + " color: " + str(array_color))
-    print("###")
+    logger.info(f"Setting device: {device.name} color: {array_color}")
 
     # Use small delay to avoid overwhelming the device controller
     time.sleep(0.15)

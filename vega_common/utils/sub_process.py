@@ -7,6 +7,11 @@ This module provides common subprocess operations used across Vega sub-projects.
 import subprocess
 from typing import List, Union, Optional, Dict, Any, Tuple
 
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_common/utils/sub_process")
+
 
 def run_cmd(
     cmd: Union[List[str], str],
@@ -55,7 +60,7 @@ def run_cmd(
         # Re-raise the original error for other cases
         raise
     except (subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
-        print(f"Error running command {cmd}: {e}")
+        logger.error(f"Error running command {cmd}: {e}")
         raise
 
 

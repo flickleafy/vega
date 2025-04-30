@@ -257,7 +257,7 @@ Categories=Utility;System;
         # Gateway service
         gateway_content = f"""[Desktop Entry]
 Type=Application
-Exec=sh -c "{self.bin_dir}/vega-server-gateway >> $HOME/.local/share/vega_suit/vega-server-gateway.log 2>&1"
+Exec=sh -c "{self.bin_dir}/vega-server-gateway"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
@@ -270,7 +270,7 @@ Comment=Vega Server Gateway background service
         # User service
         user_content = f"""[Desktop Entry]
 Type=Application
-Exec=sh -c "{self.bin_dir}/vega-server-user >> $HOME/.local/share/vega_suit/vega-server-user.log 2>&1"
+Exec=sh -c "{self.bin_dir}/vega-server-user"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
@@ -287,6 +287,10 @@ Comment=Vega Server User background service
         Time complexity: O(1) for file creation, O(P) for systemctl operations
         where P is the process execution time.
         """
+        # Get the current user's home directory to pass to the root service
+        # This ensures logs go to the user's config dir instead of /root
+        user_home = str(Path.home())
+        
         if self.system_install:
             print("Setting up root service as a systemd service...")
             service_content = f"""[Unit]
@@ -294,6 +298,10 @@ Description=Vega Server Root Service
 After=network.target
 
 [Service]
+# VEGA_USER_HOME tells the root service where to store logs
+# Without this, logs would go to /root/.config/vega_suit instead of
+# the installing user's config directory
+Environment="VEGA_USER_HOME={user_home}"
 ExecStart={self.bin_dir}/vega-server-root
 Restart=on-failure
 User=root
@@ -314,6 +322,7 @@ WantedBy=multi-user.target
             self._run_sudo_command(["systemctl", "start", "vega-server-root.service"])
 
             print("Root service installed and started as a systemd service.")
+            print(f"Logs will be stored in {user_home}/.config/vega_suit/")
         else:
             print(
                 "Warning: Without system-wide installation, the root service cannot be properly set up as a systemd service."
@@ -323,7 +332,12 @@ WantedBy=multi-user.target
             )
             print("")
             print(
-                "To properly install the root service, you may run the following commands later with sudo privileges:"
+                "To run the root service manually with proper logging, use:"
+            )
+            print(f'  VEGA_USER_HOME="{user_home}" sudo -E {self.bin_dir}/vega-server-root')
+            print("")
+            print(
+                "To properly install the root service as a systemd service, run the following with sudo:"
             )
             print(f'sudo cp "{self.bin_dir}/vega-server-root" /usr/local/bin/')
             print(
@@ -334,6 +348,7 @@ WantedBy=multi-user.target
             print("After=network.target")
             print("")
             print("[Service]")
+            print(f'Environment="VEGA_USER_HOME={user_home}"')
             print("ExecStart=/usr/local/bin/vega-server-root")
             print("Restart=on-failure")
             print("User=root")

@@ -7,6 +7,11 @@ This module provides common list operations used across Vega sub-projects.
 from typing import List, TypeVar, Union, Any, Optional
 import statistics
 
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_common/utils/list_process")
+
 T = TypeVar("T", int, float)
 
 
@@ -30,7 +35,7 @@ def list_average(data: List[T]) -> float:
     try:
         return statistics.mean(data)
     except (TypeError, ValueError) as e:
-        print(f"Error calculating average: {e}")
+        logger.error(f"Error calculating average: {e}")
         raise
 
 

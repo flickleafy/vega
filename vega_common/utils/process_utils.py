@@ -7,6 +7,11 @@ This module provides functions for listing and filtering system processes.
 import psutil
 from typing import Set, List
 
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_common/utils/process_utils")
+
 # TODO: Consider making these lists configurable or loading from a file
 ignore_list = [
     "cryptd",
@@ -241,7 +246,7 @@ def get_process_list() -> Set[str]:
             # Ignore processes that ended, are restricted, or are zombies
             pass
         except psutil.Error as e:
-            print(f"Error accessing process info: {e}")
+            logger.debug(f"Error accessing process info: {e}")
             # Decide whether to raise or continue based on requirements
             # For now, continue to get as many processes as possible
             continue

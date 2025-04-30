@@ -15,10 +15,15 @@ from vega_common.utils.color_utils import (
     normalize_rgb_values,
     RGBColor,
 )
-import logging
+from vega_common.utils.logging_utils import get_module_logger
 from typing import List, Dict, Any, Optional, Tuple
 import math
 import numpy as np
+import warnings
+
+# Setup module-specific logging
+logger = get_module_logger("vega_common/utils/color_gradient_utils")
+
 import warnings
 
 # Suppress the warning about Matplotlib not being available
@@ -140,7 +145,7 @@ def _lch_to_rgb_norm(lch: np.ndarray) -> np.ndarray:
         return rgb_norm
     except Exception as e:
         # Log error during conversion (optional)
-        logging.error(f"Error converting LCH {lch} to RGB: {e}", exc_info=True)
+        logger.error(f"Error converting LCH {lch} to RGB: {e}", exc_info=True)
         # Fallback to gray based on Lightness in case of conversion errors
         gray_level = np.clip(lch[0] / 100.0, 0, 1)
         return np.array([gray_level] * 3)
@@ -260,7 +265,7 @@ def _map_to_srgb_gamut(
 
     # Optional: Log if mapping occurred
     if not np.array_equal(final_rgb, rgb_norm):
-        logging.debug(f"Mapped out-of-gamut LCH {lch_color} to RGB {final_rgb}")
+        logger.debug(f"Mapped out-of-gamut LCH {lch_color} to RGB {final_rgb}")
 
     return final_rgb
 
