@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Exec=sh -c "/home/xxx/Documents/vega-server-user >> /home/xxx/Documents/vega-server-user.log 2>&1"
+Exec=sh -c "/home/xxx/Documents/vega-server-user"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true

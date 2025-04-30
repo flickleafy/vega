@@ -2,9 +2,13 @@
 Concrete implementation for monitoring CPU metrics using psutil.
 """
 
-import logging
 import sys
 from typing import List, Optional, Dict, Any, Tuple, Union
+
+from .logging_utils import get_module_logger
+
+# Setup module-specific logging (must be before any logger usage)
+logger = get_module_logger("vega_common/utils/cpu_devices")
 
 # Import psutil conditionally based on platform
 try:
@@ -17,9 +21,9 @@ except ImportError:
     psutil = None
     # Log error only if psutil is expected but not found
     if sys.platform.startswith("linux") or sys.platform.startswith("freebsd"):
-        logging.error("psutil library not found, but required for CPU monitoring on this platform.")
+        logger.error("psutil library not found, but required for CPU monitoring on this platform.")
     else:
-        logging.info(
+        logger.info(
             "psutil library not found or not supported on this platform. CPU monitoring disabled."
         )
 
@@ -27,6 +31,7 @@ from .device_monitor import DeviceMonitor
 from .device_status import DeviceStatus
 import vega_common.utils.sub_process as sub_process
 from .device_controller import DeviceController
+from .cpu_powerplan_manager import CpuPowerplanManager, PowerPlan
 
 # Import process utilities
 from vega_common.utils.process_utils import (
@@ -34,6 +39,9 @@ from vega_common.utils.process_utils import (
     detect_balance_apps,
     detect_performance_apps,
 )
+
+# Import CPU thermal specifications
+from vega_common.utils.cpu_thermal_specs import get_thermal_spec, CpuThermalSpec
 
 # Default sensor names to look for CPU temperature, ordered by likely preference
 DEFAULT_CPU_TEMP_SENSOR_LABELS = (
@@ -79,112 +87,71 @@ DEFAULT_CPU_TEMP_DEVICE_NAMES = (
     # Add other specific chip names if known for target hardware, e.g., it86*, nct679*
 )
 
-# Constants for power plans (CPU governors)
-POWER_PLANS = ["powersave", "schedutil", "performance"]
-CPU_GOVERNOR_PATH_TEMPLATE = "/sys/devices/system/cpu/cpu{cpu_index}/cpufreq/scaling_governor"
-ALL_CPU_GOVERNOR_PATH = (
-    "/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"  # For setting all cores
-)
 
 
 class CpuController(DeviceController):
-    """Controller for CPU properties like power plan (governor)."""
+    """Controller for CPU properties like power plan (governor) and EPP."""
 
     def __init__(self, device_id: str = "cpu_main", device_name: str = "Unknown CPU"):
-        """Initialize the CPU controller."""
+        """Initialize the CPU controller.
+        
+        Automatically detects CPU model and loads appropriate thermal specifications
+        for dynamic temperature thresholds. Uses CpuPowerplanManager for low-level
+        power management features.
+        """
         # O(1) complexity
         super().__init__(
             device_id=device_id, device_name=device_name, device_type="cpu"
-        )  # Removed device_name parameter
-        logging.info(f"Initialized controller for CPU (ID: {self.device_id})")
-        # No complex initialization needed like NVML
+        )
+        
+        # Load thermal specifications for this CPU
+        self.thermal_spec: CpuThermalSpec = get_thermal_spec()
+        
+        # Initialize power plan manager for low-level operations
+        self._powerplan_manager = CpuPowerplanManager()
 
-    def _run_cpu_command(self, command: list[str], use_shell: bool = False) -> Optional[str]:
-        """Helper to run a command related to CPU control."""
-        # Complexity depends on sub_process.run_cmd, likely O(P) where P is process execution time
-        try:
-            cmd_to_run = command if not use_shell else " ".join(command)
-            result = sub_process.run_cmd(cmd_to_run, shell=use_shell)
-            return result.strip() if result else None
-        except PermissionError as e:
-            # Clean permission error logging
-            logging.warning(
-                f"CPU Controller ({self.device_id}): Insufficient permissions to execute command. "
-                "Root/sudo privileges required for CPU governor control."
+        logger.info(
+            f"Initialized controller for CPU (ID: {self.device_id}) - "
+            f"Thermal thresholds: hot={self.thermal_spec.hot_threshold:.1f}°C, "
+            f"warm={self.thermal_spec.warm_threshold:.1f}°C"
+            f"Available power plans: {self._powerplan_manager.get_available_logical_plans()}"
+        )
+
+    def set_power_plan(self, powerplan: str) -> bool:
+        """Sets the CPU power plan using logical plan names.
+        
+        Args:
+            powerplan: Logical plan name. Supported:
+                  - "performance": Maximum performance
+                  - "balanced-performance": Balanced with performance bias
+                  - "balanced-efficient": Balanced with efficiency bias  
+                  - "powersave": Maximum power saving
+        
+        Returns:
+            True if the power plan was applied successfully.
+        """
+        # Delegate to power plan manager - it handles resolution and application
+        success = self._powerplan_manager.set_logical_powerplan(powerplan)
+        
+        if success:
+            logger.info(
+                f"CPU Controller ({self.device_id}): Power plan set to '{powerplan}'"
             )
-            return None
-        except Exception as e:
-            logging.error(
-                f"CPU Controller ({self.device_id}): Error running command '{cmd_to_run}': {e}"
-            )
-            return None
-
-    def set_power_plan(self, plan: str) -> bool:
-        """Sets the CPU scaling governor for all cores."""
-        # O(P) complexity due to command execution (set + verify)
-        if plan not in POWER_PLANS:
-            logging.error(
-                f"CPU Controller ({self.device_id}): Invalid power plan '{plan}'. Must be one of {POWER_PLANS}."
-            )
-            return False
-
-        # Construct the command using tee. This often requires root privileges.
-        # Assuming sub_process.run_cmd handles permissions (e.g., runs as root or
-        # uses sudo internally).
-        cmd_str = f"echo {plan} | tee {ALL_CPU_GOVERNOR_PATH}"
-
-        logging.debug(f"CPU Controller ({self.device_id}): Running command: {cmd_str}")
-        # Use use_shell=True because of the pipe '|'
-        result = self._run_cpu_command([cmd_str], use_shell=True)
-
-        # Check if command execution itself failed
-        if result is None and not hasattr(
-            sub_process, "mock_run_cmd"
-        ):  # Modified to use hasattr for safer check
-            # If result is None and it wasn't due to a test side effect raising an exception,
-            # it means _run_cpu_command caught an exception.
-            # Don't log again here since _run_cpu_command already logged the issue
-            return False
-
-        # Skip verification if command failed in tests
-        if result is None:
-            return False
-
-        # Verify by reading back the governor of the first core
-        # Small delay might sometimes be needed for the change to reflect, but usually not for governors.
-        # time.sleep(0.1)
-        current_plan = self.get_current_power_plan()
-        if current_plan == plan:
-            logging.info(
-                f"CPU Controller ({self.device_id}): Successfully set power plan to '{plan}'."
-            )
-            return True
         else:
-            logging.warning(
-                f"CPU Controller ({self.device_id}): Set power plan command ran, but current plan is '{current_plan}' (expected '{plan}'). Verification failed."
+            logger.error(
+                f"CPU Controller ({self.device_id}): Failed to set power plan '{powerplan}'"
             )
-            return False
+        
+        return success
 
     def get_current_power_plan(self) -> Optional[str]:
-        """Gets the current CPU scaling governor for core 0."""
-        # O(P) complexity due to command execution
-        governor_file = CPU_GOVERNOR_PATH_TEMPLATE.format(cpu_index=0)
-        cmd = ["cat", governor_file]
-        result = self._run_cpu_command(cmd)
-
-        if result is not None:
-            # Check if the result is one of the known plans
-            if result not in POWER_PLANS:
-                logging.warning(
-                    f"CPU Controller ({self.device_id}): Read unknown power plan '{result}' from {governor_file}."
-                )
-            return result  # Return the value read, known or unknown
-        else:
-            # Error occurred during command execution
-            logging.error(
-                f"CPU Controller ({self.device_id}): Failed to read power plan from {governor_file}."
-            )
-            return None
+        """Gets the current CPU power state as a logical plan name.
+        
+        Returns:
+            Logical plan name ("performance", "balanced-performance", "balanced-efficient", "powersave")
+            or the raw governor name if no mapping matches, or None on read failure.
+        """
+        return self._powerplan_manager.get_logical_powerplan()
 
     def determine_optimal_power_plan(
         self, temperature: Optional[float], trend: Optional[str] = None
@@ -201,34 +168,36 @@ class CpuController(DeviceController):
         Complexity: O(ProcList) + O(DetectApps) where ProcList is complexity of get_process_list and DetectApps is complexity of app detection functions.
         """
         # Defaults
-        powerplan = "powersave"
+        powerplan = PowerPlan.POWERSAVE.value
         sleep = 10  # Default sleep for idle/cool state
 
         # Handle unknown temperature
         if temperature is None:
-            logging.debug(
-                f"CPU Controller ({self.device_id}): Temperature is None, defaulting to powersave, sleep 600."
+            logger.debug(
+                f"CPU Controller ({self.device_id}): Temperature is None, defaulting to {PowerPlan.POWERSAVE.value}, sleep 600."
             )
             return {"powerplan": powerplan, "sleep": 600}  # Long sleep if temp unknown
 
-        # --- Temperature-based rules ---
+        # --- Temperature-based rules using dynamic thresholds ---
         # O(1) comparisons
-        is_hot = temperature > 42
-        is_warm = temperature > 39
+        is_hot = temperature > self.thermal_spec.hot_threshold
+        is_warm = temperature > self.thermal_spec.warm_threshold
 
         if is_hot:
-            logging.debug(
-                f"CPU Controller ({self.device_id}): Temp ({temperature}°C) > 42°C (hot), suggesting powersave, sleep 600."
+            logger.debug(
+                f"CPU Controller ({self.device_id}): Temp ({temperature}°C) > "
+                f"{self.thermal_spec.hot_threshold:.1f}°C (hot), suggesting {PowerPlan.POWERSAVE.value}, sleep 600."
             )
-            powerplan = "powersave"
+            powerplan = PowerPlan.POWERSAVE.value
             sleep = 600
             # Skip process checks for hot temperatures
             return {"powerplan": powerplan, "sleep": sleep}
         elif is_warm:
-            logging.debug(
-                f"CPU Controller ({self.device_id}): Temp ({temperature}°C) > 39°C (warm), suggesting powersave, sleep 300."
+            logger.debug(
+                f"CPU Controller ({self.device_id}): Temp ({temperature}°C) > "
+                f"{self.thermal_spec.warm_threshold:.1f}°C (warm), suggesting {PowerPlan.BALANCED_EFFICIENT.value}, sleep 300."
             )
-            powerplan = "powersave"
+            powerplan = PowerPlan.BALANCED_EFFICIENT.value
             sleep = 300
             # Skip process checks for warm temperatures
             return {"powerplan": powerplan, "sleep": sleep}
@@ -241,16 +210,16 @@ class CpuController(DeviceController):
             balance_app_detected = detect_balance_apps(process_list)
 
             if performance_app_detected:
-                logging.debug(
-                    f"CPU Controller ({self.device_id}): Performance app detected, suggesting performance, sleep 60."
+                logger.debug(
+                    f"CPU Controller ({self.device_id}): Performance app detected, suggesting {PowerPlan.PERFORMANCE.value}, sleep 60."
                 )
-                powerplan = "performance"
+                powerplan = PowerPlan.PERFORMANCE.value
                 sleep = 60
             elif balance_app_detected:
-                logging.debug(
-                    f"CPU Controller ({self.device_id}): Balance app detected, suggesting schedutil, sleep 120."
+                logger.debug(
+                    f"CPU Controller ({self.device_id}): Balance app detected, suggesting {PowerPlan.BALANCED_EFFICIENT.value}, sleep 120."
                 )
-                powerplan = "schedutil"
+                powerplan = PowerPlan.BALANCED_EFFICIENT.value
                 sleep = 120
             else:
                 # --- Trend influence (only if cool and no specific apps) ---
@@ -259,21 +228,21 @@ class CpuController(DeviceController):
                     # Become slightly more responsive if temp is rising from cool state, will
                     # verify next loop for powerplan change
                     sleep = max(5, sleep // 2)  # Halve sleep, min 5s
-                    logging.debug(
+                    logger.debug(
                         f"CPU Controller ({self.device_id}): Temp cool, trend rising. Current powerplan: {powerplan}. Shortening sleep to {sleep}s."
                     )
                 elif trend == "falling":
                     # Become less responsive if temp is falling from cool state
                     sleep = min(300, sleep * 2)  # Double sleep, max 300s (warm threshold sleep)
-                    logging.debug(
+                    logger.debug(
                         f"CPU Controller ({self.device_id}): Temp cool, trend falling. Current powerplan: {powerplan}. Lengthening sleep to {sleep}s."
                     )
                 else:  # Stable or None trend
-                    logging.debug(
+                    logger.debug(
                         f"CPU Controller ({self.device_id}): Temp cool, trend stable/None. Keeping powerplan {powerplan}, sleep {sleep}."
                     )
 
-        logging.info(
+        logger.info(
             f"CPU Controller ({self.device_id}): Determined plan: {powerplan}, sleep: {sleep}s (Temp: {temperature}°C, Trend: {trend})"
         )
         return {"powerplan": powerplan, "sleep": sleep}
@@ -289,7 +258,7 @@ class CpuController(DeviceController):
         optimal_plan_name = recommendation["powerplan"]
         # The sleep value is returned by determine_optimal_power_plan but not used here.
         # The caller (e.g., the main loop) should handle the sleep duration.
-        logging.info(
+        logger.info(
             f"CPU Controller ({self.device_id}): Applying optimal power plan: {optimal_plan_name}"
         )
         return self.set_power_plan(optimal_plan_name)
@@ -314,17 +283,17 @@ class CpuController(DeviceController):
                 # Get optional trend from settings
                 trend = settings.get("trend")
                 if trend and not isinstance(trend, str):
-                    logging.warning(
+                    logger.warning(
                         f"CPU Controller ({self.device_id}): Invalid type for 'trend' setting: {type(trend)}. Ignoring trend."
                     )
                     trend = None
                 elif trend not in [None, "rising", "falling", "stable"]:
-                    logging.warning(
+                    logger.warning(
                         f"CPU Controller ({self.device_id}): Invalid value for 'trend' setting: '{trend}'. Ignoring trend."
                     )
                     trend = None
 
-                logging.debug(
+                logger.debug(
                     f"CPU Controller ({self.device_id}): Auto power plan triggered with temp {temp}°C, trend '{trend}'."
                 )
                 # Pass temperature and trend to apply_optimal_power_plan
@@ -335,7 +304,7 @@ class CpuController(DeviceController):
                 if not applied:
                     overall_success = False
             else:
-                logging.error(
+                logger.error(
                     f"CPU Controller ({self.device_id}): 'auto_power_plan' requires a valid 'temperature' in settings."
                 )
                 overall_success = False
@@ -355,7 +324,7 @@ class CpuController(DeviceController):
                     if applied:
                         any_setting_successful = True
                 else:
-                    logging.error(
+                    logger.error(
                         f"CPU Controller ({self.device_id}): Invalid type for power_plan setting: {type(value)}. Expected str."
                     )
                     applied = False
@@ -365,7 +334,7 @@ class CpuController(DeviceController):
             #     if not success:
             #         overall_success = False
             else:
-                logging.warning(f"CPU Controller ({self.device_id}): Unsupported setting '{key}'.")
+                logger.warning(f"CPU Controller ({self.device_id}): Unsupported setting '{key}'.")
                 applied = False  # Mark as not applied
 
             # If we intended to apply this specific setting but failed
@@ -378,7 +347,7 @@ class CpuController(DeviceController):
 
         # Check if any settings were actually processed
         if settings_applied_count == 0 and "auto_power_plan" not in original_settings:
-            logging.warning(
+            logger.warning(
                 f"CPU Controller ({self.device_id}): No applicable settings found in {original_settings}."
             )
             return False  # Return False if no relevant settings were provided
@@ -390,17 +359,22 @@ class CpuController(DeviceController):
         """Get available controllable settings and their current values."""
         # O(P) complexity due to reading current settings
         settings = {}
-        current_plan = self.get_current_power_plan()
+        current_powerplan = self.get_current_power_plan()
         # Only include current plan if successfully read
-        if current_plan is not None:
-            settings["power_plan"] = current_plan
+        if current_powerplan is not None:
+            settings["power_plan"] = current_powerplan
         else:
             settings["power_plan"] = None  # Indicate reading failed
 
-        settings["available_power_plans"] = POWER_PLANS
+        # Return logical plans from the manager
+        settings["available_power_plans"] = self._powerplan_manager.get_available_logical_plans()
 
         # Add other readable/controllable settings
         # settings["current_clock_speed"] = self.get_current_clock_speed() # Hypothetical
+
+        # Add debugging info (from manager)
+        settings["detected_governors"] = self._powerplan_manager.available_governors
+        settings["detected_epps"] = self._powerplan_manager.available_epps
 
         return settings
 
@@ -408,7 +382,7 @@ class CpuController(DeviceController):
         """Perform any cleanup needed for the CPU controller."""
         # O(1) complexity
         # Usually nothing needed for CPU governor control via /sys
-        logging.info(f"Cleaned up controller for CPU (ID: {self.device_id})")
+        logger.info(f"Cleaned up controller for CPU (ID: {self.device_id})")
 
 
 class CpuMonitor(DeviceMonitor):
@@ -461,17 +435,17 @@ class CpuMonitor(DeviceMonitor):
 
         # Check psutil availability during initialization
         if psutil is None:
-            logging.warning(
+            logger.warning(
                 f"CPU Monitor ({self.device_id}): psutil not available or import failed. CPU monitoring disabled."
             )
             self.status.set_error("initialization", "psutil library not available.")
         elif not hasattr(psutil, "sensors_temperatures"):
-            logging.warning(
+            logger.warning(
                 f"CPU Monitor ({self.device_id}): psutil.sensors_temperatures not available on this system. CPU temperature monitoring disabled."
             )
             self.status.set_error("initialization", "psutil.sensors_temperatures not available.")
         else:
-            logging.info(f"CPU Monitor ({self.device_id}): Initialized successfully using psutil.")
+            logger.info(f"CPU Monitor ({self.device_id}): Initialized successfully using psutil.")
 
     def update_status(self) -> None:
         """
@@ -525,7 +499,7 @@ class CpuMonitor(DeviceMonitor):
                         if label_lower in self.cpu_temp_sensor_labels:
                             cpu_temp = sensor.current
                             found_sensor_info = f"{device_name}/{label_lower}"
-                            logging.debug(
+                            logger.debug(
                                 f"CPU Monitor ({self.device_id}): Found potential temp {cpu_temp}°C from {found_sensor_info}"
                             )
                             break  # Found the best match for this device based on label priority
@@ -534,7 +508,7 @@ class CpuMonitor(DeviceMonitor):
 
             # Strategy 2: If still no temp, check specified devices for *any* sensor (less reliable)
             if cpu_temp is None:
-                logging.debug(
+                logger.debug(
                     f"CPU Monitor ({self.device_id}): No prioritized sensor found, checking specified devices for any sensor."
                 )
                 for device_name in self.cpu_temp_device_names:
@@ -551,7 +525,7 @@ class CpuMonitor(DeviceMonitor):
                                 else "unknown"
                             )
                             found_sensor_info = f"{device_name}/{label_lower} (fallback)"
-                            logging.debug(
+                            logger.debug(
                                 f"CPU Monitor ({self.device_id}): Found fallback temp {cpu_temp}°C from {found_sensor_info}"
                             )
                             break
@@ -563,7 +537,7 @@ class CpuMonitor(DeviceMonitor):
                 # O(1) update
                 self.status.update_property("temperature", float(cpu_temp))
                 self.status.clear_error("temperature")  # Clear previous errors if successful
-                logging.info(
+                logger.info(
                     f"CPU Monitor ({self.device_id}): Updated temperature to {cpu_temp:.1f}°C from {found_sensor_info}"
                 )
             else:
@@ -573,14 +547,14 @@ class CpuMonitor(DeviceMonitor):
                     self.status.set_error(
                         "temperature", "Could not find a suitable CPU temperature sensor."
                     )
-                    logging.warning(
+                    logger.warning(
                         f"CPU Monitor ({self.device_id}): Could not find CPU temperature sensor via psutil after checking {list(all_temps.keys())}."
                     )
                 self.status.update_property("temperature", None)  # Ensure it's None if not found
 
         except Exception as e:
             # O(1) update
-            logging.error(
+            logger.error(
                 f"CPU Monitor ({self.device_id}): Error reading psutil sensors: {e}", exc_info=True
             )
             self.status.set_error("temperature", f"Error reading psutil sensors: {e}")
@@ -623,4 +597,4 @@ class CpuMonitor(DeviceMonitor):
         if hasattr(self, "status"):
             self.status.clear_errors()
 
-        logging.info(f"Cleaned up monitor for CPU (ID: {self.device_id})")
+        logger.info(f"Cleaned up monitor for CPU (ID: {self.device_id})")

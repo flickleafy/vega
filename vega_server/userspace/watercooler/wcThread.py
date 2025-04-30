@@ -1,6 +1,5 @@
 import globals
 import time
-import logging
 from typing import Dict, Optional, List, Tuple
 
 # Common utilities
@@ -10,6 +9,10 @@ from vega_common.utils.device_manager import DeviceManager
 from vega_common.utils.cpu_devices import CpuMonitor  # Use the common CPU monitor
 from vega_common.utils.watercooler_devices import WatercoolerMonitor, WatercoolerController  # New imports
 from vega_common.utils.color_gradient_utils import get_temperature_color
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_server/userspace/watercooler")
 
 VALUE_COLUMN = 1
 LIQUID_TEMPERATURE_ROW = 0
@@ -19,11 +22,6 @@ TEMPERATURE_WINDOW_SIZE = 10
 
 # CPU monitoring constants
 CPU_MONITOR_INTERVAL = 3.0
-
-# Setup basic logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(threadName)s - %(message)s"
-)
 
 
 def watercooler_thread(_):
@@ -39,7 +37,7 @@ def watercooler_thread(_):
     Returns:
         None: This thread runs continuously until an error or interruption.
     """
-    logging.info("Initializing watercooler thread...")
+    logger.info("Initializing watercooler thread...")
     device_manager = DeviceManager()
     cpu_monitor_id = "cpu_main"  # Consistent ID for the CPU monitor
 
@@ -53,16 +51,16 @@ def watercooler_thread(_):
         )
 
         if cpu_monitor.status.has_error("initialization"):
-            logging.error(
+            logger.error(
                 f"CPU Monitor initialization failed: {cpu_monitor.status.get_error('initialization')}"
             )
             cpu_monitor = None
         else:
             device_manager.register_monitor(cpu_monitor)
-            logging.info(f"Registered CPU monitor (ID: {cpu_monitor_id})")
+            logger.info(f"Registered CPU monitor (ID: {cpu_monitor_id})")
 
     except Exception as e:
-        logging.error(f"Failed to create or register CPU monitor: {e}", exc_info=True)
+        logger.error(f"Failed to create or register CPU monitor: {e}", exc_info=True)
         cpu_monitor = None
 
     # --- Initialize Watercooler Devices ---
@@ -93,33 +91,33 @@ def watercooler_thread(_):
                 wc_monitors.append(wc_monitor)
                 wc_controllers.append(wc_controller)
                 
-                logging.info(f"Initialized WC device {device_index}: {wc_monitor.device_name}")
+                logger.info(f"Initialized WC device {device_index}: {wc_monitor.device_name}")
                 device_index += 1
             except IndexError:
                 # No more devices available - this is expected
                 break
             except Exception as e:
                 # Skip this device if there's an issue
-                logging.warning(f"Could not initialize watercooler device {device_index}: {e}")
+                logger.warning(f"Could not initialize watercooler device {device_index}: {e}")
                 device_index += 1
                 if device_index >= 5:  # Reasonable limit to avoid infinite loop
                     break
 
         if not wc_monitors:
-            logging.warning("No compatible watercooling devices found.")
+            logger.warning("No compatible watercooling devices found.")
             if not cpu_monitor:
-                logging.error("No CPU monitor and no watercooler devices. Exiting thread.")
+                logger.error("No CPU monitor and no watercooler devices. Exiting thread.")
                 return None
-            logging.warning("No watercooler devices, will only monitor CPU.")
+            logger.warning("No watercooler devices, will only monitor CPU.")
         else:
-            logging.info(f"Found {len(wc_monitors)} watercooling device(s).")
+            logger.info(f"Found {len(wc_monitors)} watercooling device(s).")
 
     except Exception as e:
-        logging.error(f"Error during watercooler initialization: {e}", exc_info=True)
+        logger.error(f"Error during watercooler initialization: {e}", exc_info=True)
         wc_monitors = []
         wc_controllers = []
         if not cpu_monitor:
-            logging.error("No CPU monitor and watercooler init failed. Exiting thread.")
+            logger.error("No CPU monitor and watercooler init failed. Exiting thread.")
             return None
 
     # --- Initialize Sliding Windows ---
@@ -129,9 +127,9 @@ def watercooler_thread(_):
     try:
         if device_manager.monitors:
             device_manager.start_all_monitors()
-            logging.info("Device monitoring started.")
+            logger.info("Device monitoring started.")
         else:
-            logging.info("No monitors registered to start.")
+            logger.info("No monitors registered to start.")
 
         # Allow a brief delay for monitors to collect initial data
         time.sleep(2)
@@ -155,7 +153,7 @@ def watercooler_thread(_):
                     cpu_temp = cpu_status.get_property("temperature")
                     
                     if cpu_temp is None or cpu_status.has_error("temperature"):
-                        logging.warning(
+                        logger.warning(
                             f"CPU Monitor ({cpu_monitor_id}): No valid temperature reading. Will attempt estimation."
                         )
                         cpu_temp = None
@@ -169,13 +167,13 @@ def watercooler_thread(_):
                         trend_info = cpu_status.get_property_trend("temperature")
                         if trend_info:
                             cpu_temp_rate, cpu_temp_trend = trend_info
-                            logging.debug(
+                            logger.debug(
                                 f"CPU temp trend: {cpu_temp_trend} at {cpu_temp_rate:.2f}°C/sample"
                             )
                         
                      
                 else:
-                    logging.warning(
+                    logger.warning(
                         f"Could not retrieve status for CPU monitor ({cpu_monitor_id})."
                     )
 
@@ -184,7 +182,7 @@ def watercooler_thread(_):
                 if cpu_temp is not None:
                     # If we have CPU temp but no watercooler, just log and store the values
                     trend_str = f", Trend: {cpu_temp_trend}" if cpu_temp_trend else ""
-                    logging.info(
+                    logger.info(
                         f"CPU Temp: {cpu_temp:.1f}°C, Avg: {cpu_average_temp:.1f}°C{trend_str} (No WC Devices)"
                     )
                     # Calculate LED color based on CPU temperature
@@ -197,7 +195,7 @@ def watercooler_thread(_):
                     if cpu_temp_trend:
                         globals.WC_DATA_OUT[0]["cpu_temp_trend"] = cpu_temp_trend
                 else:
-                    logging.info("No CPU or WC devices active. Idling.")
+                    logger.info("No CPU or WC devices active. Idling.")
                 time.sleep(5)
                 continue
 
@@ -210,7 +208,7 @@ def watercooler_thread(_):
                 wc_pump_speed = wc_monitor.get_pump_speed()
                 
                 if wc_temp is None:
-                    logging.warning(
+                    logger.warning(
                         f"Could not get status for WC device {index} ({wc_monitor.device_name})"
                     )
                     continue
@@ -220,7 +218,7 @@ def watercooler_thread(_):
                     # Fall back to estimating CPU temperature from liquid temperature
                     # if no sensor data is available
                     cpu_temp = estimate_cpu_from_liquid_temp(wc_temp)
-                    logging.debug(
+                    logger.debug(
                         f"Estimated CPU temp: {cpu_temp:.1f}°C from liquid temp {wc_temp:.1f}°C"
                     )
                     
@@ -254,7 +252,7 @@ def watercooler_thread(_):
                     fan_status = cpu_temp_to_fan_speed(weighed_average_temp)
                     wc_controller.set_fan_speed(fan_status)
                 except Exception as e:
-                    logging.error(
+                    logger.error(
                         f"Error during WC control (LED/Fan) for device {index}: {e}", exc_info=True
                     )
                     array_color = [0, 0, 0]
@@ -262,7 +260,7 @@ def watercooler_thread(_):
 
                 # --- Logging ---
                 trend_str = f", CPU Trend: {cpu_temp_trend}" if cpu_temp_trend else ""
-                logging.info(
+                logger.info(
                     f"Device {index}: Liquid Temp={wc_temp:.1f}°C (Avg={wc_average_temp:.1f}°C), "
                     f"CPU Temp={cpu_temp:.1f}°C (Avg={cpu_average_temp:.1f}°C){trend_str}, "
                     f"Weighted Avg={weighed_average_temp:.1f}°C, "
@@ -291,13 +289,13 @@ def watercooler_thread(_):
             time.sleep(3)
 
     except KeyboardInterrupt:
-        logging.info("Watercooler thread received KeyboardInterrupt. Shutting down.")
+        logger.info("Watercooler thread received KeyboardInterrupt. Shutting down.")
     except Exception as e:
-        logging.error(f"Unhandled exception in watercooler thread: {e}", exc_info=True)
+        logger.error(f"Unhandled exception in watercooler thread: {e}", exc_info=True)
     finally:
-        logging.info("Stopping device monitors...")
+        logger.info("Stopping device monitors...")
         device_manager.stop_all_monitors()
-        logging.info("Device monitors stopped.")
+        logger.info("Device monitors stopped.")
 
-    logging.info("Watercooler thread finished.")
+    logger.info("Watercooler thread finished.")
     return None

@@ -74,8 +74,9 @@ On terminal, run:
 
 In the editor that is opened, you can type this:
 
-> @reboot /path/to/file/vega-server-root >> /path/to/file/vega-server-root.log 2>&1
+> @reboot VEGA_USER_HOME=/home/xxx /path/to/file/vega-server-root
 
+- **VEGA_USER_HOME=/home/xxx:** sets the user's home directory so logs are stored in `/home/xxx/.config/vega_suit/` instead of `/root/.config/vega_suit/`. Replace `xxx` with your actual username.
 - **@reboot:** this will start the script as soon Linux is loaded
 - **/path/to/file/:** this is where the script is located
 - **>>** this will append the output from the script to the vega-server-root.log
@@ -83,17 +84,17 @@ In the editor that is opened, you can type this:
 
 #### Startup configuration for vega-server-user
 
-> sh -c "/path/to/file/vega-server-user >> /path/to/file/vega-server-user.log 2>&1"
+> sh -c "/path/to/file/vega-server-user"
 
 #### Startup configuration for vega-server-gateway
 
-> sh -c "/path/to/file/vega-server-gateway >> /path/to/file/vega-server-gateway.log 2>&1"
+> sh -c "/path/to/file/vega-server-gateway"
 
 ### Client-side configuration
 
 Startup configuration for client-side app.
 
-> sh -c "/path/to/file/vega-server-user >> /path/to/file/vega-server-user.log 2>&1"
+> sh -c "/path/to/file/vega-client"
 
 ## Package building
 

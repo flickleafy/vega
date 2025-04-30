@@ -1,4 +1,5 @@
 import os
+import sys
 import gi
 
 gi.require_version("Gtk", "3.0")
@@ -11,12 +12,34 @@ from gi.repository import AppIndicator3 as appindicator
 from gi.repository import Notify as notify
 
 import globals
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_client/taskbar")
 
 APPINDICATOR_ID = "vega_client"
 
 
+def get_icon_path():
+    """
+    Get the path to the icon file, handling both development and bundled executable scenarios.
+    
+    When running as a PyInstaller bundle, sys._MEIPASS points to the temp extraction directory.
+    Otherwise, look for the icon relative to this script's location.
+    """
+    icon_name = "cpu_v.png"
+    
+    # Check if running as a PyInstaller bundle
+    if hasattr(sys, '_MEIPASS'):
+        # Running as bundled executable - icon is in the extraction directory
+        return os.path.join(sys._MEIPASS, icon_name)
+    else:
+        # Running in development - icon is in the same directory as this script
+        return os.path.join(os.path.dirname(os.path.realpath(__file__)), icon_name)
+
+
 def app_indicator():
-    icon_dir = os.path.dirname(os.path.realpath(__file__)) + "/cpu_v.png"
+    icon_dir = get_icon_path()
     indicator = appindicator.Indicator.new(
         APPINDICATOR_ID, icon_dir, appindicator.IndicatorCategory.SYSTEM_SERVICES
     )
@@ -37,7 +60,7 @@ def get_checked_variable(var_type: str, variable, key: str):
     try:
         string = var_type + str(round(variable[key], 1)) + degree
     except Exception as err:
-        print(err)
+        logger.debug(f"Could not read variable {key}: {err}")
 
     return string
 

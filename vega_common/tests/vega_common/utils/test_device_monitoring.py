@@ -279,27 +279,31 @@ class TestDeviceManager:
         self.gpu_monitor.update_status()
         self.cpu_monitor.update_status()
 
-        # Get status for GPU
-        gpu_status = self.manager.get_device_status("gpu", "gpu-1")
-        assert gpu_status["device_type"] == "gpu"
-        assert gpu_status["device_id"] == "gpu-1"
-        assert gpu_status["temperature"] == 30
+        # Get status for GPU (using device_id only)
+        gpu_status = self.manager.get_device_status("gpu-1")
+        assert gpu_status.device_type == "gpu"
+        assert gpu_status.device_id == "gpu-1"
+        assert gpu_status.get_property("temperature") == 30
 
         # Test nonexistent device
-        assert self.manager.get_device_status("nonexistent", "device") is None
+        assert self.manager.get_device_status("nonexistent") is None
 
-    def test_get_all_status(self):
+    def test_get_all_statuses(self):
         """Test getting status of all devices."""
         # Update status manually
         self.gpu_monitor.update_status()
         self.cpu_monitor.update_status()
 
-        # Get all statuses
-        all_status = self.manager.get_all_status()
-        assert "gpu:gpu-1" in all_status
-        assert "cpu:cpu-1" in all_status
-        assert all_status["gpu:gpu-1"]["temperature"] == 30
-        assert all_status["cpu:cpu-1"]["temperature"] == 30
+        # Get all statuses (now returns List[DeviceStatus])
+        all_statuses = self.manager.get_all_statuses()
+        assert len(all_statuses) == 2
+        # Find the GPU status
+        gpu_status = next((s for s in all_statuses if s.device_id == "gpu-1"), None)
+        cpu_status = next((s for s in all_statuses if s.device_id == "cpu-1"), None)
+        assert gpu_status is not None
+        assert cpu_status is not None
+        assert gpu_status.get_property("temperature") == 30
+        assert cpu_status.get_property("temperature") == 30
 
     def test_apply_device_settings(self):
         """Test applying settings to a specific device."""

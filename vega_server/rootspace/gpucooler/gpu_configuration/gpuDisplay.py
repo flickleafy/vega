@@ -3,6 +3,11 @@ import vega_common.utils.sub_process as sub_process
 import gpucooler.gpu_configuration.multiscreens as multiscreens
 import gpucooler.gpu_configuration.coolbits as coolbits
 
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_server/rootspace/gpucooler/gpu_configuration")
+
 
 def configure_gpus():
     """Automatically enable fans creating headless Display configuration"""
@@ -19,7 +24,7 @@ def enable_all_gpus():
         result = sub_process.run_cmd(cmd)
         return result
     except Exception as err:
-        print(ERROR_MESSAGE, err)
+        logger.error(f"{ERROR_MESSAGE} {err}")
 
 
 def enable_coolbits():
@@ -28,4 +33,4 @@ def enable_coolbits():
         result = sub_process.run_cmd(cmd)
         return result
     except Exception as err:
-        print(ERROR_MESSAGE, err)
+        logger.error(f"{ERROR_MESSAGE} {err}")
