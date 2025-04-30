@@ -7,11 +7,14 @@ monitoring functionality across different hardware components in a consistent wa
 
 import threading
 import time
-import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Callable, Optional, Union
 
 from vega_common.utils.device_status import DeviceStatus
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_common/utils/device_monitor")
 
 
 class DeviceMonitor(ABC):
@@ -84,7 +87,7 @@ class DeviceMonitor(ABC):
             self.monitor_thread = threading.Thread(target=self._monitoring_loop)
             self.monitor_thread.daemon = True
             self.monitor_thread.start()
-            logging.info(f"Started monitoring for {self.device_type} device: {self.device_id}")
+            logger.info(f"Started monitoring for {self.device_type} device: {self.device_id}")
 
     def stop_monitoring(self) -> None:
         """
@@ -95,7 +98,7 @@ class DeviceMonitor(ABC):
             if self.monitor_thread:
                 self.monitor_thread.join(timeout=2.0)  # Wait up to 2 seconds for thread to finish
             self.is_monitoring = False
-            logging.info(f"Stopped monitoring for {self.device_type} device: {self.device_id}")
+            logger.info(f"Stopped monitoring for {self.device_type} device: {self.device_id}")
 
     def _monitoring_loop(self) -> None:
         """
@@ -105,7 +108,7 @@ class DeviceMonitor(ABC):
             try:
                 self.update_status()
             except Exception as e:
-                logging.error(f"Error updating {self.device_type} status: {str(e)}")
+                logger.error(f"Error updating {self.device_type} status: {str(e)}")
 
             # Wait for the next update interval or until stop is requested
             self._stop_event.wait(self.monitoring_interval)

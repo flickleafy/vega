@@ -3,6 +3,10 @@ import socket
 import json
 import errno
 from vega_common.utils.datetime_utils import get_current_time
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_server/gateway/client")
 
 
 def data_reception_loop(client_socket, server_name, received_data):
@@ -21,15 +25,11 @@ def data_reception_loop(client_socket, server_name, received_data):
             json_data_in = json_data_in.decode("utf-8")
 
             received_data[0] = json.loads(json_data_in)
-            print(
-                get_current_time()
-                + "Received from "
-                + server_name
-                + " server: "
-                + str(received_data[0])
+            logger.info(
+                f"{get_current_time()}Received from {server_name} server: {received_data[0]}"
             )
         except Exception as e:
-            print("An exception occurred: ", e)
+            logger.error(f"An exception occurred: {e}")
             return False
         time.sleep(3)
 
@@ -59,16 +59,16 @@ def connect_to_server(address, port, server_name, received_data):
                 client_socket.close()
 
         except socket.timeout:
-            print(f"Server at {address}:{port} is not running. Trying to reconnect...")
+            logger.warning(f"Server at {address}:{port} is not running. Trying to reconnect...")
         except socket.error as e:
             if e.errno == errno.ECONNREFUSED:
-                print(
+                logger.warning(
                     f"Connection refused by the server at {address}:{port}. Trying to reconnect..."
                 )
             else:
-                print(f"An error occurred: {e}. Trying to reconnect...")
+                logger.error(f"An error occurred: {e}. Trying to reconnect...")
         except Exception as e:
-            print(f"An unexpected error occurred: {e}. Trying to reconnect...")
+            logger.error(f"An unexpected error occurred: {e}. Trying to reconnect...")
 
         # Close the client socket to avoid port blocking
         client_socket.close()

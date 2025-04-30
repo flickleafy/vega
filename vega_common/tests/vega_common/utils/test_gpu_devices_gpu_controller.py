@@ -378,19 +378,22 @@ class TestNvidiaGpuController:
             mock_set_fan_speed.assert_not_called()
 
     def test_apply_settings_single_value_tuple(self, mock_pynvml):
-        """Test applying settings with a single-value tuple (invalid format for two fans)."""
+        """Test applying settings with a single-value tuple (valid format for single fan)."""
         # Arrange
         controller = NvidiaGpuController(0)
-        settings = {"fan_speed": (50,)}  # Single value tuple is invalid for the method
+        settings = {"fan_speed": (50,)}  # Single value tuple is now valid
 
-        # Patch set_fan_speed to ensure it's not called with tuple
+        # Patch set_fan_speed to track calls and return True
         with patch.object(controller, "set_fan_speed") as mock_set_fan_speed:
+            mock_set_fan_speed.return_value = True
+
             # Act
             result = controller.apply_settings(settings)
 
-            # Assert
-            assert result is False
-            mock_set_fan_speed.assert_not_called()
+            # Assert - single value tuple is now valid and calls set_fan_speed with unpacked value
+            assert result is True
+            mock_set_fan_speed.assert_called_once_with(50)
+
 
     def test_apply_settings_failure(self, mock_pynvml):
         """Test applying settings when set_fan_speed fails."""

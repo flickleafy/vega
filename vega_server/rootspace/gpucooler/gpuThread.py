@@ -1,7 +1,6 @@
 import globals
 import copy
 import time
-import logging
 from typing import Dict
 
 # Use common utilities
@@ -9,6 +8,10 @@ from vega_common.utils.sliding_window import NumericSlidingWindow
 from vega_common.utils.device_manager import DeviceManager
 from vega_common.utils.gpu_devices import NvidiaGpuMonitor, NvidiaGpuController, NVMLError
 from vega_common.utils.temperature_utils import gpu_temp_to_fan_speed
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_server/rootspace/gpucooler")
 
 # Keep gpuDisplay for initial configuration, consider refactoring later
 import gpucooler.gpu_configuration.gpuDisplay as gpuDisplay
@@ -18,12 +21,9 @@ try:
     import pynvml
 except ImportError:
     pynvml = None
-    logging.error("pynvml library not found. NVIDIA GPU monitoring/control disabled in gpuThread.")
+    logger.error("pynvml library not found. NVIDIA GPU monitoring/control disabled in gpuThread.")
 
 TEMPERATURE_WINDOW_SIZE = 10
-
-# Setup basic logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def gpu_thread(_):
@@ -44,18 +44,18 @@ def gpu_thread(_):
     try:
         # Initial GPU configuration (consider moving this)
         try:
-            logging.info("Configuring GPUs using gpuDisplay...")
+            logger.info("Configuring GPUs using gpuDisplay...")
             gpuDisplay.configure_gpus()
-            logging.info("GPU configuration finished.")
+            logger.info("GPU configuration finished.")
         except Exception as e:
-            logging.error(f"Failed during gpuDisplay.configure_gpus: {e}", exc_info=True)
+            logger.error(f"Failed during gpuDisplay.configure_gpus: {e}", exc_info=True)
 
         # Detect and register NVIDIA GPUs
         if pynvml:
             try:
                 pynvml.nvmlInit()
                 device_count = pynvml.nvmlDeviceGetCount()
-                logging.info(f"Found {device_count} NVIDIA GPU(s).")
+                logger.info(f"Found {device_count} NVIDIA GPU(s).")
 
                 for i in range(device_count):
                     try:
@@ -73,12 +73,12 @@ def gpu_thread(_):
                         )
                         gpu_index_map[monitor.device_id] = i  # Map device_id to simple index
 
-                        logging.info(
+                        logger.info(
                             f"Registered monitor and controller for GPU {i} (ID: {monitor.device_id})"
                         )
 
                     except (NVMLError, ValueError) as e:
-                        logging.error(
+                        logger.error(
                             f"Failed to initialize monitor/controller for GPU {i}: {e}",
                             exc_info=True,
                         )
@@ -86,20 +86,20 @@ def gpu_thread(_):
                 pynvml.nvmlShutdown()  # Shutdown after initial count/setup
 
             except NVMLError as e:
-                logging.error(f"Failed to initialize NVML for device detection: {e}", exc_info=True)
+                logger.error(f"Failed to initialize NVML for device detection: {e}", exc_info=True)
                 # No GPUs will be monitored if NVML fails here
         else:
-            logging.warning("pynvml not available. Skipping NVIDIA GPU detection.")
+            logger.warning("pynvml not available. Skipping NVIDIA GPU detection.")
 
         if not device_manager.get_monitors_by_type("gpu"):
-            logging.warning("No GPU monitors registered. GPU thread will idle.")
+            logger.warning("No GPU monitors registered. GPU thread will idle.")
             # Keep thread alive but do nothing, or exit if appropriate
             while True:
                 time.sleep(60)  # Sleep longer if no devices
 
         # Start monitoring
         device_manager.start_all_monitors()
-        logging.info("GPU monitoring started.")
+        logger.info("GPU monitoring started.")
 
         # Main monitoring and control loop
         while True:
@@ -113,14 +113,14 @@ def gpu_thread(_):
                 gpu_temp = status.get_property("temperature")
 
                 if gpu_temp is None or status.has_error("temperature"):
-                    logging.warning(
+                    logger.warning(
                         f"No valid temperature reading for GPU {device_id}. Skipping control."
                     )
                     continue  # Skip control logic if temp is invalid
 
                 if device_id not in gpu_temp_windows:
                     # Should not happen if registration was successful, but handle defensively
-                    logging.error(f"Temperature window not found for GPU {device_id}. Recreating.")
+                    logger.error(f"Temperature window not found for GPU {device_id}. Recreating.")
                     gpu_temp_windows[device_id] = NumericSlidingWindow(
                         capacity=TEMPERATURE_WINDOW_SIZE
                     )
@@ -133,33 +133,51 @@ def gpu_thread(_):
                 # --- Fan Speed Calculation ---
                 # Use the same modifiers as the original gpuTemp logic
                 # O(1) complexity for each call
-                speed_fan0 = gpu_temp_to_fan_speed(gpu_average_degree, modifier=0.001)
-                speed_fan1 = gpu_temp_to_fan_speed(gpu_average_degree, modifier=0.05)
+                speed_fan1 = gpu_temp_to_fan_speed(gpu_average_degree, modifier=0.001)
+                speed_fan2 = gpu_temp_to_fan_speed(gpu_average_degree, modifier=0.05)
+                speed_fan3 = gpu_temp_to_fan_speed(gpu_average_degree, modifier=0.1)
 
                 # --- Fan Speed Control ---
                 controller = gpu_controllers.get(device_id)
                 if controller:
                     try:
                         # O(1) complexity for NVML call
-                        success = controller.set_fan_speed(speed1=speed_fan0, speed2=speed_fan1)
+                        success = controller.set_fan_speed(speed_fan1, speed_fan2, speed_fan3)
                         if not success:
-                            logging.warning(f"Failed to set fan speed for GPU {device_id}")
+                            logger.warning(f"Failed to set fan speed for GPU {device_id}")
+                        
+                        # --- Thermal Protection: Power Limit Control ---
+                        # Apply power limiting if GPU temperature is approaching thermal limits
+                        # Most NVIDIA GPUs have a Tjmax around 83°C, adjust if needed
+                        GPU_TJMAX = 83.0
+                        new_power_limit = controller.apply_thermal_protection(
+                            temperature=gpu_average_degree,
+                            tjmax=GPU_TJMAX
+                        )
+                        if new_power_limit is not None:
+                            logger.info(
+                                f"GPU {device_id}: Applied thermal protection, "
+                                f"power limit set to {new_power_limit:.1f}W"
+                            )
+                        
                     except Exception as e:
-                        logging.error(
-                            f"Error setting fan speed for GPU {device_id}: {e}", exc_info=True
+                        logger.error(
+                            f"Error setting fan speed/power for GPU {device_id}: {e}", exc_info=True
                         )
                 else:
-                    logging.error(f"Controller not found for GPU {device_id}")
+                    logger.error(f"Controller not found for GPU {device_id}")
 
                 # --- Logging and Global State Update ---
                 # Retrieve current speeds from status for logging/globals
                 current_fan1 = status.get_property("fan_speed_1")
                 current_fan2 = status.get_property("fan_speed_2")
+                current_fan3 = status.get_property("fan_speed_3")
 
-                logging.info(
+                logger.info(
                     f"GPU {device_id}: Temp={gpu_temp:.1f}°C, AvgTemp={gpu_average_degree:.1f}°C, "
-                    f"Fan1 Cur={current_fan1}%, Set={speed_fan0}%, "
-                    f"Fan2 Cur={current_fan2}%, Set={speed_fan1}%"
+                    f"Fan1 Cur={current_fan1}%, Set={speed_fan1}%, "
+                    f"Fan2 Cur={current_fan2}%, Set={speed_fan2}%, "
+                    f"Fan3 Cur={current_fan3}%, Set={speed_fan3}%"
                 )
 
                 # Update global state (similar to previous logic)
@@ -171,8 +189,10 @@ def gpu_thread(_):
                 )
                 globals.WC_DATA_OUT[0][f"gpu{gpu_index}_c_fan_speed1"] = current_fan1
                 globals.WC_DATA_OUT[0][f"gpu{gpu_index}_c_fan_speed2"] = current_fan2
-                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_s_fan_speed1"] = speed_fan0
-                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_s_fan_speed2"] = speed_fan1
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_c_fan_speed3"] = current_fan3
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_s_fan_speed1"] = speed_fan1
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_s_fan_speed2"] = speed_fan2
+                globals.WC_DATA_OUT[0][f"gpu{gpu_index}_s_fan_speed3"] = speed_fan3
                 # Add other properties if needed, e.g., name, utilization
                 globals.WC_DATA_OUT[0][f"gpu{gpu_index}_name"] = status.device_name
                 # globals.WC_DATA_OUT[0][f"gpu{gpu_index}_id"] = device_id # PCI ID
@@ -181,15 +201,15 @@ def gpu_thread(_):
             time.sleep(3)  # Keep the 3-second interval
 
     except KeyboardInterrupt:
-        logging.info("GPU thread received KeyboardInterrupt. Shutting down.")
+        logger.info("GPU thread received KeyboardInterrupt. Shutting down.")
     except Exception as e:
-        logging.error(f"Unhandled exception in GPU thread: {e}", exc_info=True)
+        logger.error(f"Unhandled exception in GPU thread: {e}", exc_info=True)
     finally:
-        logging.info("Stopping GPU monitors...")
+        logger.info("Stopping GPU monitors...")
         device_manager.stop_all_monitors()
-        logging.info("GPU monitors stopped.")
+        logger.info("GPU monitors stopped.")
         # NVML cleanup is handled within the Monitor/Controller cleanup methods
         # via _shutdown_nvml_safe
 
-    logging.info("GPU thread finished.")
+    logger.info("GPU thread finished.")
     return None  # Explicitly return None

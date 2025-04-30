@@ -131,9 +131,10 @@ def mock_device_monitor():
 
 @pytest.fixture
 def mock_logging():
-    """Fixture to mock logging functions."""
-    with patch("vega_common.utils.gpu_devices.logging") as mock:
+    """Fixture to mock logging functions (the module-level logger object)."""
+    with patch("vega_common.utils.gpu_devices.logger") as mock:
         yield mock
+
 
 
 class TestNvidiaGpuMonitor:

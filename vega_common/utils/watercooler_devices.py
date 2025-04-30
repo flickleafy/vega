@@ -5,11 +5,20 @@ This module provides classes for monitoring and controlling liquid cooling syste
 (AIOs, custom loops) that are supported by the liquidctl library.
 """
 
-import logging
 import threading
 import time
 from typing import List, Dict, Any, Optional, Tuple, Union, Callable
 from abc import ABCMeta
+
+from .device_monitor import DeviceMonitor
+from .device_controller import DeviceController
+from .device_status import DeviceStatus
+from .temperature_utils import cpu_temp_to_fan_speed
+from .color_gradient_utils import get_temperature_color as gradient_temp_to_color
+from .logging_utils import get_module_logger
+
+# Setup module-specific logging (must be before any logger usage)
+logger = get_module_logger("vega_common/utils/watercooler_devices")
 
 # Import liquidctl conditionally to handle cases where it's not installed
 try:
@@ -18,16 +27,10 @@ try:
     liquidctl_available = True
 except ImportError:
     liquidctl_available = False
-    logging.error("liquidctl library not found. Watercooler monitoring/control disabled.")
+    logger.error("liquidctl library not found. Watercooler monitoring/control disabled.")
     # Create dummy BaseDriver class for type hinting when liquidctl is not available
     class BaseDriver(metaclass=ABCMeta):
         pass
-
-from .device_monitor import DeviceMonitor
-from .device_controller import DeviceController
-from .device_status import DeviceStatus
-from .temperature_utils import cpu_temp_to_fan_speed
-from .color_gradient_utils import get_temperature_color as gradient_temp_to_color
 
 # Global lock for device operations to prevent concurrent access issues
 _liquidctl_lock = threading.Lock()
@@ -49,7 +52,7 @@ def find_liquidctl_devices() -> List[BaseDriver]:
     Time complexity: O(N) where N is the number of connected USB devices.
     """
     if not liquidctl_available:
-        logging.error("Cannot find liquidctl devices: liquidctl library not available.")
+        logger.error("Cannot find liquidctl devices: liquidctl library not available.")
         return []
     
     # Keywords that indicate a device is NOT a watercooler (LED controllers, etc.)
@@ -64,7 +67,7 @@ def find_liquidctl_devices() -> List[BaseDriver]:
     try:
         with _liquidctl_lock:
             all_devices = list(liquidctl.find_liquidctl_devices())
-            logging.debug(f"Found {len(all_devices)} liquidctl-compatible device(s)")
+            logger.debug(f"Found {len(all_devices)} liquidctl-compatible device(s)")
             
             # Filter out LED-only controllers
             watercooler_devices = []
@@ -75,15 +78,15 @@ def find_liquidctl_devices() -> List[BaseDriver]:
                 is_excluded = any(keyword in device_name for keyword in excluded_keywords)
                 
                 if is_excluded:
-                    logging.info(f"Skipping non-watercooler device: {device.description}")
+                    logger.info(f"Skipping non-watercooler device: {device.description}")
                 else:
                     watercooler_devices.append(device)
-                    logging.debug(f"Found watercooler device: {device.description}")
+                    logger.debug(f"Found watercooler device: {device.description}")
             
-            logging.debug(f"Found {len(watercooler_devices)} watercooler device(s) after filtering")
+            logger.debug(f"Found {len(watercooler_devices)} watercooler device(s) after filtering")
             return watercooler_devices
     except Exception as e:
-        logging.error(f"Error while searching for liquidctl devices: {e}", exc_info=True)
+        logger.error(f"Error while searching for liquidctl devices: {e}", exc_info=True)
         return []
 
 
@@ -108,7 +111,7 @@ def initialize_device(device: BaseDriver) -> bool:
             device.initialize()
             return True
     except Exception as e:
-        logging.error(f"Error initializing liquidctl device {device.description}: {e}", exc_info=True)
+        logger.error(f"Error initializing liquidctl device {device.description}: {e}", exc_info=True)
         return False
 
 
@@ -131,7 +134,7 @@ def get_device_status(device: BaseDriver) -> Optional[List[Tuple[str, Any, str]]
         with _liquidctl_lock:
             return device.get_status()
     except Exception as e:
-        logging.error(f"Error getting status for liquidctl device {device.description}: {e}", exc_info=True)
+        logger.error(f"Error getting status for liquidctl device {device.description}: {e}", exc_info=True)
         return None
 
 
@@ -156,7 +159,7 @@ def set_fan_speed(device: BaseDriver, speed: int) -> bool:
             device.set_fixed_speed("fan", speed)
             return True
     except Exception as e:
-        logging.error(f"Error setting fan speed for liquidctl device {device.description}: {e}", exc_info=True)
+        logger.error(f"Error setting fan speed for liquidctl device {device.description}: {e}", exc_info=True)
         return False
 
 
@@ -182,7 +185,7 @@ def set_pump_speed(device: BaseDriver, speed: int) -> bool:
             return True
     except Exception as e:
         # Some devices might not support separate pump speed control
-        logging.warning(f"Could not set pump speed for device {device.description}: {e}")
+        logger.warning(f"Could not set pump speed for device {device.description}: {e}")
         return False
 
 
@@ -204,7 +207,7 @@ def set_led_color(device: BaseDriver, r: int, g: int, b: int, mode: str = "fixed
     Time complexity: O(1) for the device operations.
     """
     if not liquidctl_available:
-        logging.debug("liquidctl not available, cannot set LED color")
+        logger.debug("liquidctl not available, cannot set LED color")
         return False
     
     # liquidctl expects colors as a list of RGB triples: [[r, g, b]]
@@ -225,29 +228,29 @@ def set_led_color(device: BaseDriver, r: int, g: int, b: int, mode: str = "fixed
             for channel in channels:
                 for mode_attempt in modes_to_try:
                     try:
-                        logging.debug(f"Attempting set_color: device={device.description}, channel={channel}, mode={mode_attempt}, color={color_list}")
+                        logger.debug(f"Attempting set_color: device={device.description}, channel={channel}, mode={mode_attempt}, color={color_list}")
                         result = device.set_color(channel, mode_attempt, color_list, speed=speed)
-                        logging.info(f"Successfully set LED color on {device.description} (channel={channel}, mode={mode_attempt}, RGB=[{r},{g},{b}])")
+                        logger.info(f"Successfully set LED color on {device.description} (channel={channel}, mode={mode_attempt}, RGB=[{r},{g},{b}])")
                         success = True
                         break  # Exit mode loop on success
                     except KeyError as e:
                         # Mode not supported for this device
                         attempts.append(f"{channel}/{mode_attempt}: mode not supported")
-                        logging.debug(f"Mode '{mode_attempt}' not supported for channel '{channel}' on {device.description}")
+                        logger.debug(f"Mode '{mode_attempt}' not supported for channel '{channel}' on {device.description}")
                     except Exception as e:
                         # Other error (wrong channel, etc.)
                         attempts.append(f"{channel}/{mode_attempt}: {type(e).__name__}: {str(e)}")
-                        logging.debug(f"Failed to set color for channel '{channel}' mode '{mode_attempt}': {e}")
+                        logger.debug(f"Failed to set color for channel '{channel}' mode '{mode_attempt}': {e}")
                 
                 if success:
                     break  # Exit channel loop on success
             
             if not success:
-                logging.warning(f"Failed to set LED color for {device.description} after trying all channels/modes. Attempts: {attempts}")
+                logger.warning(f"Failed to set LED color for {device.description} after trying all channels/modes. Attempts: {attempts}")
             
             return success
     except Exception as e:
-        logging.error(f"Error setting LED color for liquidctl device {device.description}: {e}", exc_info=True)
+        logger.error(f"Error setting LED color for liquidctl device {device.description}: {e}", exc_info=True)
         return False
 
 
@@ -352,7 +355,7 @@ class WatercoolerMonitor(DeviceMonitor):
         if initial_status is None:
             raise RuntimeError(f"Failed to get initial status for device {device_name}")
             
-        logging.info(f"Initialized monitor for {device_name} (ID: {device_id})")
+        logger.info(f"Initialized monitor for {device_name} (ID: {device_id})")
     
     def update_status(self) -> None:
         """
@@ -436,7 +439,7 @@ class WatercoolerMonitor(DeviceMonitor):
             self.status.mark_updated()
             
         except Exception as e:
-            logging.error(f"Error updating watercooler status for {self.device_id}: {e}", exc_info=True)
+            logger.error(f"Error updating watercooler status for {self.device_id}: {e}", exc_info=True)
             self.status.set_error("general", f"Error updating status: {str(e)}")
     
     def get_liquid_temperature(self) -> Optional[float]:
@@ -489,7 +492,7 @@ class WatercoolerMonitor(DeviceMonitor):
         if hasattr(self, "status"):
             self.status.clear_errors()
             
-        logging.info(f"Cleaned up monitor for watercooler (ID: {self.device_id})")
+        logger.info(f"Cleaned up monitor for watercooler (ID: {self.device_id})")
 
 
 class WatercoolerController(DeviceController):
@@ -560,7 +563,7 @@ class WatercoolerController(DeviceController):
         self.current_fan_speed = None
         self.current_pump_speed = None
         
-        logging.info(f"Initialized controller for {device_name} (ID: {device_id})")
+        logger.info(f"Initialized controller for {device_name} (ID: {device_id})")
     
     def set_fan_speed(self, speed: int) -> bool:
         """
@@ -580,9 +583,9 @@ class WatercoolerController(DeviceController):
         success = set_fan_speed(self.device, speed)
         if success:
             self.current_fan_speed = speed
-            logging.debug(f"Set fan speed to {speed}% for {self.device_id}")
+            logger.debug(f"Set fan speed to {speed}% for {self.device_id}")
         else:
-            logging.warning(f"Failed to set fan speed for {self.device_id}")
+            logger.warning(f"Failed to set fan speed for {self.device_id}")
             
         return success
     
@@ -604,7 +607,7 @@ class WatercoolerController(DeviceController):
         success = set_pump_speed(self.device, speed)
         if success:
             self.current_pump_speed = speed
-            logging.debug(f"Set pump speed to {speed}% for {self.device_id}")
+            logger.debug(f"Set pump speed to {speed}% for {self.device_id}")
         
         return success
     
@@ -632,13 +635,13 @@ class WatercoolerController(DeviceController):
             if len(r) >= 3:
                 r_val, g_val, b_val = int(r[0]), int(r[1]), int(r[2])
             else:
-                logging.error(f"Invalid color array format for {self.device_id}: {r}")
+                logger.error(f"Invalid color array format for {self.device_id}: {r}")
                 return False
         # Handle individual components: set_lighting_color(r, g, b)
         elif g is not None and b is not None:
             r_val, g_val, b_val = int(r), int(g), int(b)
         else:
-            logging.error(f"Invalid arguments to set_lighting_color for {self.device_id}")
+            logger.error(f"Invalid arguments to set_lighting_color for {self.device_id}")
             return False
         
         # Ensure color components are within valid range
@@ -649,9 +652,9 @@ class WatercoolerController(DeviceController):
         success = set_led_color(self.device, r_val, g_val, b_val, mode)
         if success:
             self.current_color = [r_val, g_val, b_val]
-            logging.debug(f"Set lighting color to [{r_val},{g_val},{b_val}] for {self.device_id}")
+            logger.debug(f"Set lighting color to [{r_val},{g_val},{b_val}] for {self.device_id}")
         else:
-            logging.warning(f"Failed to set lighting color for {self.device_id}")
+            logger.warning(f"Failed to set lighting color for {self.device_id}")
             
         return success
     
@@ -774,62 +777,62 @@ class WatercoolerController(DeviceController):
         
         Time complexity: O(1) for simple resource cleanup.
         """
-        logging.info(f"Cleaned up controller for watercooler (ID: {self.device_id})")
+        logger.info(f"Cleaned up controller for watercooler (ID: {self.device_id})")
 
 
 # Example usage (for testing purposes, would normally be used by DeviceManager)
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+# if __name__ == "__main__":
+#     logging.basicConfig(level=logging.DEBUG)
     
-    if not liquidctl_available:
-        print("liquidctl library not available. Cannot continue.")
-        exit(1)
+#     if not liquidctl_available:
+#         print("liquidctl library not available. Cannot continue.")
+#         exit(1)
     
-    # Find devices
-    devices = find_liquidctl_devices()
-    if not devices:
-        print("No compatible liquid cooling devices found.")
-        exit(1)
+#     # Find devices
+#     devices = find_liquidctl_devices()
+#     if not devices:
+#         print("No compatible liquid cooling devices found.")
+#         exit(1)
         
-    print(f"Found {len(devices)} liquidctl-compatible device(s):")
-    for i, dev in enumerate(devices):
-        print(f"  {i}: {dev.description}")
+#     print(f"Found {len(devices)} liquidctl-compatible device(s):")
+#     for i, dev in enumerate(devices):
+#         print(f"  {i}: {dev.description}")
     
-    try:
-        # Initialize monitor and controller for the first device
-        monitor = WatercoolerMonitor(device_index=0, monitoring_interval=2.0)
-        controller = WatercoolerController(device_index=0)
+#     try:
+#         # Initialize monitor and controller for the first device
+#         monitor = WatercoolerMonitor(device_index=0, monitoring_interval=2.0)
+#         controller = WatercoolerController(device_index=0)
         
-        # Get initial status
-        monitor.update_status()
-        print("\nCurrent status:")
-        status_dict = monitor.status.to_dict()
-        for key, value in status_dict.items():
-            if key not in ["device_id", "device_type", "last_update"]:
-                print(f"  {key}: {value}")
+#         # Get initial status
+#         monitor.update_status()
+#         print("\nCurrent status:")
+#         status_dict = monitor.status.to_dict()
+#         for key, value in status_dict.items():
+#             if key not in ["device_id", "device_type", "last_update"]:
+#                 print(f"  {key}: {value}")
         
-        # Demonstrate control
-        print("\nTesting fan control...")
-        controller.set_fan_speed(50)
-        time.sleep(2)
+#         # Demonstrate control
+#         print("\nTesting fan control...")
+#         controller.set_fan_speed(50)
+#         time.sleep(2)
         
-        print("Testing LED control...")
-        controller.set_lighting_color(0, 0, 255)  # Blue
-        time.sleep(2)
-        controller.set_lighting_by_temperature(45)  # Should be green
+#         print("Testing LED control...")
+#         controller.set_lighting_color(0, 0, 255)  # Blue
+#         time.sleep(2)
+#         controller.set_lighting_by_temperature(45)  # Should be green
         
-        # Monitor for a few cycles
-        print("\nMonitoring for 10 seconds...")
-        monitor.start_monitoring()
-        time.sleep(10)
-        monitor.stop_monitoring()
+#         # Monitor for a few cycles
+#         print("\nMonitoring for 10 seconds...")
+#         monitor.start_monitoring()
+#         time.sleep(10)
+#         monitor.stop_monitoring()
         
-        # Clean up
-        print("\nCleaning up...")
-        monitor.cleanup()
-        controller.cleanup()
+#         # Clean up
+#         print("\nCleaning up...")
+#         monitor.cleanup()
+#         controller.cleanup()
         
-    except Exception as e:
-        print(f"Error during example execution: {e}")
+#     except Exception as e:
+#         print(f"Error during example execution: {e}")
         
-    print("\nExample completed.")
+#     print("\nExample completed.")

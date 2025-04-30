@@ -2,23 +2,24 @@ import time
 from openrgb import OpenRGBClient
 from openrgb.utils import DeviceType
 
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_server/userspace/lighting")
+
 
 def init_lighting():
     # Getting this script ready to be run as a service. Waiting for the sdk to start.
     while True:
         try:
             time.sleep(10)
-            print("###")
-            print("### Connecting to OpenRGB")
-            print("###")
+            logger.info("Connecting to OpenRGB...")
             open_rgb = OpenRGBClient()
             break
         except ConnectionRefusedError:
             time.sleep(3)
             continue
-    print("###")
-    print("### Getting OpenRGB devices")
-    print("###")
+    logger.info("Getting OpenRGB devices...")
     time.sleep(0.15)
     open_rgb.update()
     time.sleep(0.15)
@@ -29,8 +30,7 @@ def init_lighting():
 
     for device in devices:
         try:
-            print("### Reseting device " + device.name)
-            print("###")
+            logger.info(f"Resetting device: {device.name}")
             time.sleep(0.15)
             device.clear()
             time.sleep(0.15)
@@ -47,8 +47,8 @@ def init_lighting():
                 time.sleep(0.15)
                 device.set_mode("static")
         except Exception as e:
-            print(f"### Error initializing device {device.name}: {e}")
-            print("### Continuing with next device...")
+            logger.error(f"Error initializing device {device.name}: {e}")
+            logger.info("Continuing with next device...")
             continue
 
     return devices  # cooler, gpu, handle

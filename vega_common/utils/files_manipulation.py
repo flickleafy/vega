@@ -9,6 +9,11 @@ import os
 import json
 from contextlib import contextmanager
 
+from vega_common.utils.logging_utils import get_module_logger
+
+# Setup module-specific logging
+logger = get_module_logger("vega_common/utils/files_manipulation")
+
 
 def read_file(path: str) -> List[str]:
     """
@@ -31,7 +36,7 @@ def read_file(path: str) -> List[str]:
         return lines
     except (FileNotFoundError, PermissionError, IOError) as e:
         # Log the error appropriately before re-raising
-        print(f"Error reading file {path}: {e}")
+        logger.error(f"Error reading file {path}: {e}")
         raise
 
 
@@ -55,7 +60,7 @@ def write_file(path: str, lines: List[str]) -> None:
             file_obj.writelines(lines)
     except (PermissionError, IOError) as e:
         # Log the error appropriately before re-raising
-        print(f"Error writing to file {path}: {e}")
+        logger.error(f"Error writing to file {path}: {e}")
         raise
 
 
@@ -100,7 +105,7 @@ def ensure_directory_exists(path: str) -> None:
     try:
         os.makedirs(path, exist_ok=True)
     except OSError as e:
-        print(f"Error creating directory {path}: {e}")
+        logger.error(f"Error creating directory {path}: {e}")
         raise
 
 
@@ -125,10 +130,10 @@ def read_json_file(path: str) -> Union[Dict[str, Any], List[Any], None]:
             data = json.load(file_obj)
         return data
     except (FileNotFoundError, PermissionError, IOError) as e:
-        print(f"Error reading JSON file {path}: {e}")
+        logger.error(f"Error reading JSON file {path}: {e}")
         raise
     except json.JSONDecodeError as e:
-        print(f"Error decoding JSON from file {path}: {e}")
+        logger.error(f"Error decoding JSON from file {path}: {e}")
         raise
 
 
@@ -160,8 +165,8 @@ def write_json_file(
         with open(path, "w") as file_obj:
             json.dump(data, file_obj, indent=indent)
     except (PermissionError, IOError) as e:
-        print(f"Error writing JSON to file {path}: {e}")
+        logger.error(f"Error writing JSON to file {path}: {e}")
         raise
     except TypeError as e:
-        print(f"Error serializing data to JSON for file {path}: {e}")
+        logger.error(f"Error serializing data to JSON for file {path}: {e}")
         raise

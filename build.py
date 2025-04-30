@@ -43,7 +43,7 @@ def run_command(cmd: List[str]) -> Tuple[bool, str]:
         return False, str(e)
 
 
-def build_executable(name: str, script_path: str, project_root: Path) -> bool:
+def build_executable(name: str, script_path: str, project_root: Path, extra_args: List[str] = None) -> bool:
     """
     Build an executable using PyInstaller.
 
@@ -51,6 +51,7 @@ def build_executable(name: str, script_path: str, project_root: Path) -> bool:
         name: Name for the output executable
         script_path: Path to the Python script to compile
         project_root: Path to the project root directory
+        extra_args: Optional list of additional PyInstaller arguments
 
     Returns:
         Boolean indicating success or failure
@@ -106,6 +107,9 @@ def build_executable(name: str, script_path: str, project_root: Path) -> bool:
         "--hidden-import=numpy.core._multiarray_tests",
         # Collect colour-science library
         "--collect-all=colour",
+        # Collect PyGObject (gi) for GTK/AppIndicator - ensures gi._error and other
+        # dynamically loaded submodules are included in the bundle
+        "--collect-all=gi",
         # Fix libusb/pyusb backend issue for liquidctl:
         # PyInstaller bundles an incompatible libusb. We need to include the
         # system's libusb-1.0 and libhidapi-libusb libraries for USB device access.
@@ -115,6 +119,11 @@ def build_executable(name: str, script_path: str, project_root: Path) -> bool:
         f"--paths={project_root}",  # Add project root to search path
         script_path,
     ]
+    
+    # Add any extra arguments for this specific build
+    if extra_args:
+        # Insert extra args before the script_path (which should be last)
+        cmd = cmd[:-1] + extra_args + [script_path]
     
     success, output = run_command(cmd)
 
@@ -197,12 +206,16 @@ def main() -> int:
     build_dir = script_dir / BUILD_DIR_NAME
     assets_dir = script_dir / "assets"
 
-    # Dictionary of executables to build: {name: script_path}
+    # Dictionary of executables to build: {name: (script_path, extra_args)}
     executables = {
-        "vega-server-gateway": "vega_server/gateway/main.py",
-        "vega-server-root": "vega_server/rootspace/main.py",
-        "vega-server-user": "vega_server/userspace/main.py",
-        "vega-client": "vega_client/main.py",
+        "vega-server-gateway": ("vega_server/gateway/main.py", None),
+        "vega-server-root": ("vega_server/rootspace/main.py", None),
+        "vega-server-user": ("vega_server/userspace/main.py", None),
+        "vega-client": (
+            "vega_client/main.py",
+            # Bundle the taskbar icon inside the executable
+            [f"--add-data={script_dir / 'vega_client' / 'cpu_v.png'}:."],
+        ),
     }
 
     # Ensure build directory exists
@@ -212,8 +225,8 @@ def main() -> int:
     print("Building executables...")
     build_failures = 0
 
-    for name, script_path in executables.items():
-        if not build_executable(name, str(script_dir / script_path), script_dir):
+    for name, (script_path, extra_args) in executables.items():
+        if not build_executable(name, str(script_dir / script_path), script_dir, extra_args):
             build_failures += 1
 
     if build_failures > 0:
