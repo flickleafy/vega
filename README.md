@@ -24,7 +24,9 @@ sudo apt-get install -y \
   gir1.2-gtk-3.0 \
   libcairo2 \
   libglib2.0-dev \
-  gobject-introspection
+  gobject-introspection \
+  python3-gi \
+  python3-cairo
 ```
 
 These dependencies are required for:

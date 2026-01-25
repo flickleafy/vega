@@ -13,95 +13,84 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 # Constants
 TEMPERATURE_WINDOW_SIZE = 10  # Size of sliding window for temperature averaging
-CPU_MONITOR_INTERVAL = 3.0   # How frequently to update CPU monitoring data (seconds)
+CPU_MONITOR_INTERVAL = 3.0  # How frequently to update CPU monitoring data (seconds)
 DEFAULT_SLEEP_INTERVAL = 10  # Default sleep time when no recommendation is available (seconds)
+
 
 def cpuclocking_thread(_):
     """
     Monitors CPU temperature and adjusts power plan (CPU governor) accordingly.
-    
+
     Uses the DeviceManager with CpuMonitor and CpuController from vega_common utilities
     to implement intelligent CPU power management based on temperature and system load.
-    
+
     Args:
         _ (Any): Unused argument (compatibility with thread target signature).
-        
+
     Returns:
         None: This function runs indefinitely until an error or interruption.
     """
     logging.info("Initializing CPU clocking thread...")
     time.sleep(30)
-    
+
     device_manager = DeviceManager()
-    cpu_temp_window = NumericSlidingWindow(capacity=TEMPERATURE_WINDOW_SIZE)
-    last_temperature: Optional[float] = None
-    sleep_interval = DEFAULT_SLEEP_INTERVAL
     
+    sleep_interval = DEFAULT_SLEEP_INTERVAL
+
     try:
         # Initialize CPU monitor and controller
         cpu_monitor = CpuMonitor(device_id="cpu_main", monitoring_interval=CPU_MONITOR_INTERVAL)
         cpu_controller = CpuController(device_id="cpu_main")
-        
+
         # Register with device manager
         device_manager.register_monitor(cpu_monitor)
         device_manager.register_controller(cpu_controller)
-        
+
         logging.info("Registered CPU monitor and controller")
-        
+
         # Start monitoring
         device_manager.start_all_monitors()
         logging.info("CPU monitoring started")
-        
+
         # Initial delay to allow first readings to come in
         time.sleep(5)
-        
+
         # Main monitoring and control loop
         while True:
             # Get latest CPU status
-            cpu_status = device_manager.get_device_status("cpu_main")
-            
+            cpu_status = device_manager.get_device_status(device_id="cpu_main")
+
             if cpu_status:
                 # Get current CPU temperature
                 current_temp = cpu_status.get_property("temperature")
-                
+
                 # Update temperature window and calculate average
                 if current_temp is not None:
-                    cpu_temp_window.add(current_temp)
-                    avg_temp = cpu_temp_window.get_average()
-                    
-                    # Determine temperature trend
-                    trend = None
-                    if last_temperature is not None:
-                        if current_temp > last_temperature + 0.5:
-                            trend = "rising"
-                        elif current_temp < last_temperature - 0.5:
-                            trend = "falling"
-                        else:
-                            trend = "stable"
-                    
+                    # Get average temperature from sliding window
+                    # TODO: replace to WC average temp
+                    avg_temp = cpu_status.get_property_average("temperature")
+
+                    # Get temperature trend
+                    trend = cpu_status.get_property_trend("temperature")
+
                     # Log temperature info
                     logging.info(
                         f"CPU Temperature: Current={current_temp:.1f}°C, "
                         f"Average={avg_temp:.1f}°C, Trend={trend or 'unknown'}"
                     )
-                    
-                    # Update globals for client display
-                    globals.WC_DATA_OUT[0]["cpu_degree"] = round(current_temp, 1)
-                    globals.WC_DATA_OUT[0]["cpu_average_degree"] = round(avg_temp, 1) if avg_temp is not None else None
-                    
+
                     # Determine and apply optimal power plan with trend information
-                    recommendation = cpu_controller.determine_optimal_power_plan(avg_temp, trend=trend)
+                    recommendation = cpu_controller.determine_optimal_power_plan(
+                        avg_temp, trend=trend[1]
+                    )
                     power_plan = recommendation["powerplan"]
                     sleep_interval = recommendation["sleep"]
-                    
+
                     # Apply power plan
                     success = cpu_controller.set_power_plan(power_plan)
-                    
+
                     # Update globals with power plan info
                     globals.WC_DATA_OUT[0]["cpu_powerplan"] = power_plan if success else "unknown"
-                    
-                    # Store current temperature for next iteration's trend calculation
-                    last_temperature = current_temp
                 else:
                     logging.warning("CPU temperature reading not available")
                     # Use default sleep interval when temperature is unavailable
@@ -109,10 +98,10 @@ def cpuclocking_thread(_):
             else:
                 logging.warning("Failed to get CPU status from device manager")
                 sleep_interval = DEFAULT_SLEEP_INTERVAL
-            
+
             # Wait before next cycle (dynamic sleep based on recommendation)
             time.sleep(sleep_interval)
-    
+
     except KeyboardInterrupt:
         logging.info("CPU clocking thread received KeyboardInterrupt. Shutting down.")
     except Exception as e:

@@ -2,7 +2,7 @@ from vega_common.utils.sliding_window import NumericSlidingWindow
 
 
 from datetime import datetime
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Tuple, Union, Optional
 
 
 class DeviceStatus:
@@ -15,40 +15,51 @@ class DeviceStatus:
     Attributes:
         device_id (str): Unique identifier for the device.
         device_type (str): Type of the device (e.g., 'gpu', 'cpu', 'watercooler').
+        device_name (str): Human-readable name of the device.
         status_properties (Dict[str, Any]): Dictionary of device status properties.
         last_update (datetime): Timestamp of the last status update.
         status_history (Dict[str, SlidingWindow]): History of numeric status values.
         errors (Dict[str, str]): Dictionary of error messages by property name.
     """
 
-    def __init__(self, device_id: str, device_type: str, history_size: int = 10):
+    def __init__(self, device_id: str, device_type: str, device_name: str = None, history_size: int = 10):
         """
         Initialize a DeviceStatus object.
 
         Args:
             device_id (str): Unique identifier for the device.
             device_type (str): Type of the device.
+            device_name (str, optional): Human-readable name of the device.
             history_size (int, optional): Size of the sliding window for history tracking.
                 Defaults to 10.
         """
         self.device_id = device_id
         self.device_type = device_type
+        self.device_name = device_name or device_id
         self.status_properties = {}
         self.last_update = datetime.now()
         self.status_history = {}
+        self.history_size = history_size
         # Store error messages by property name
         self.errors: Dict[str, str] = {}
 
-    def update_property(self, property_name: str, value: Any) -> None:
+    def update_property(self, property_name: str, value: Any, is_error: bool = False) -> None:
         """
         Update a status property with a new value.
 
         Args:
             property_name (str): Name of the property to update.
             value (Any): New value for the property.
+            is_error (bool): Whether this update represents an error state.
         """
         self.status_properties[property_name] = value
         self.last_update = datetime.now()
+
+        # Handle error state
+        if is_error:
+            self.set_error(property_name, f"Failed to read {property_name}")
+        else:
+            self.clear_error(property_name)
 
         # If the value is numeric, add it to the history
         if isinstance(value, (int, float)) and property_name in self.status_history:
@@ -79,11 +90,10 @@ class DeviceStatus:
             default_value (Union[int, float, None], optional): Default value to initialize history.
                 Defaults to 0. If None, no default values will be added.
         """
+        # TODO: implement alternative for non numerical properties
         if property_name not in self.status_history:
-            # Use a window of size 10 to match test_tracking_properties expectations
-            window_size = 10
             self.status_history[property_name] = NumericSlidingWindow(
-                window_size, default_value=default_value
+                self.history_size, default_value=default_value
             )
 
     def get_property_average(self, property_name: str, default: float = 0.0) -> float:
@@ -99,7 +109,11 @@ class DeviceStatus:
             float: The average property value or default if not tracked.
         """
         if property_name in self.status_history and len(self.status_history[property_name]) > 0:
-            return self.status_history[property_name].get_average()
+            if isinstance(self.status_history[property_name], NumericSlidingWindow):
+                sliding_window: NumericSlidingWindow = self.status_history[property_name]
+                return sliding_window.get_average()
+            else:
+                return default
         return default
 
     def get_property_history(self, property_name: str) -> List[Union[int, float]]:
@@ -116,6 +130,29 @@ class DeviceStatus:
             return self.status_history[property_name].get_values()
         return []
 
+    def get_property_trend(
+        self, property_name: str, default: Tuple[float, str] = (0.0, "unknown")
+    ) -> Tuple[float, str]:
+        """
+        Get the trend information of a tracked property from its history.
+
+        Args:
+            property_name (str): Name of the property to retrieve trend for.
+            default (Tuple[float, str], optional): Default value if the property isn't tracked
+                or doesn't support trend analysis. Defaults to (0.0, 'unknown').
+
+        Returns:
+            Tuple[float, str]: A tuple containing the rate of change and the trend direction
+                ("rising", "falling", or "stable"). Returns the default tuple if property isn't tracked.
+        """
+        if property_name in self.status_history and len(self.status_history[property_name]) > 0:
+            if isinstance(self.status_history[property_name], NumericSlidingWindow):
+                sliding_window: NumericSlidingWindow = self.status_history[property_name]
+                return sliding_window.get_trend_and_rate()
+            else:
+                return default
+        return default
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert the device status to a dictionary representation.
@@ -126,6 +163,7 @@ class DeviceStatus:
         result = {
             "device_id": self.device_id,
             "device_type": self.device_type,
+            "device_name": self.device_name,
             "last_update": self.last_update.isoformat(),
             **self.status_properties,
         }
@@ -191,3 +229,15 @@ class DeviceStatus:
         Complexity: O(1) - Dictionary clear operation.
         """
         self.errors.clear()
+
+    def mark_updated(self) -> None:
+        """
+        Mark the status as updated with the current timestamp.
+
+        This is useful for tracking when the last update occurred,
+        especially when update_property is not called but the status
+        should still be marked as refreshed.
+
+        Complexity: O(1)
+        """
+        self.last_update = datetime.now()
